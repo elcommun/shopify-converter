@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>楽天→Shopify変換 | EL COMMUN</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lodash.js/4.17.21/lodash.min.js"></script>
+<style>
+  /* === EL COMMUN UI デザインシステム === */
+  :root {
+    --primary:#E85D26;--primary-light:#FFF3EE;--primary-dark:#C4461B;
+    --gray-50:#F9FAFB;--gray-100:#F3F4F6;--gray-200:#E5E7EB;
+    --gray-400:#9CA3AF;--gray-600:#4B5563;--gray-800:#1F2937;
+    --green:#10B981;--green-light:#ECFDF5;
+    --red:#EF4444;--red-light:#FEF2F2;
+    --yellow-light:#FFFBEB;--blue-light:#EFF6FF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Hiragino Sans','Noto Sans JP','Meiryo',sans-serif;background:var(--gray-100);color:var(--gray-800);min-height:100vh;}
+  header{background:white;border-bottom:3px solid var(--primary);padding:16px 32px;display:flex;align-items:center;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+  .logo{width:36px;height:36px;background:var(--primary);border-radius:8px;display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:14px;}
+  header h1{font-size:18px;font-weight:700;}
+  header span{font-size:12px;color:var(--gray-400);margin-left:4px;}
+  .container{max-width:860px;margin:0 auto;padding:32px 16px;}
+  .info-box{background:var(--yellow-light);border:1px solid #FDE68A;border-radius:10px;padding:14px 18px;margin-bottom:24px;font-size:13px;color:#92400E;line-height:1.6;}
+  .info-box strong{color:#78350F;}
+  .card{background:white;border-radius:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);margin-bottom:20px;overflow:hidden;}
+  .card-header{padding:16px 20px;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;gap:10px;}
+  .step{width:28px;height:28px;background:var(--primary);color:white;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;flex-shrink:0;}
+  .card-header h2{font-size:15px;font-weight:700;}
+  .sub{font-size:12px;color:var(--gray-400);margin-left:4px;}
+  .card-body{padding:20px;}
+  .upload-zone{border:2px dashed var(--gray-200);border-radius:10px;padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--gray-50);position:relative;}
+  .upload-zone:hover,.upload-zone.drag{border-color:var(--primary);background:var(--primary-light);}
+  .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .upload-icon{font-size:36px;margin-bottom:10px;}
+  .upload-zone p{font-size:14px;color:var(--gray-600);margin-bottom:4px;font-weight:600;}
+  .upload-zone small{font-size:12px;color:var(--gray-400);}
+  .file-status{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;margin-top:12px;font-size:13px;}
+  .file-status.ok{background:var(--green-light);color:#065F46;}
+  .file-status.err{background:var(--red-light);color:#991B1B;}
+  .rule-box{background:var(--blue-light);border:1px solid #BFDBFE;border-radius:8px;padding:14px 16px;font-size:13px;color:#1E40AF;line-height:1.9;}
+  .rule-box ul{margin-left:18px;}
+  .primary-btn{width:100%;padding:15px;background:var(--primary);color:white;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;transition:background .2s;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .primary-btn:hover:not(:disabled){background:var(--primary-dark);}
+  .primary-btn:disabled{background:var(--gray-400);cursor:not-allowed;}
+  .log-box{margin-top:16px;background:var(--gray-800);color:#D1FAE5;border-radius:8px;padding:16px;font-size:12px;font-family:'Courier New',monospace;line-height:1.8;max-height:280px;overflow-y:auto;display:none;}
+  .log-box.show{display:block;}
+  .log-ok{color:#6EE7B7;}.log-warn{color:#FCD34D;}.log-err{color:#FCA5A5;}.log-info{color:#93C5FD;}
+  .log-sep{color:#374151;margin:2px 0;}
+  .result-section{display:none;background:var(--green-light);border:1px solid #6EE7B7;border-radius:12px;padding:24px;margin-top:20px;text-align:center;}
+  .result-section.show{display:block;}
+  .result-section h3{color:#065F46;font-size:17px;margin-bottom:14px;}
+  .dl-btn{display:inline-flex;align-items:center;gap:8px;padding:13px 32px;background:var(--green);color:white;border:none;border-radius:8px;font-size:15px;font-weight:700;cursor:pointer;transition:background .2s;}
+  .dl-btn:hover{background:#059669;}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px;}
+  .stat{background:white;border-radius:8px;padding:14px;text-align:center;border:1px solid var(--gray-200);}
+  .stat .num{font-size:26px;font-weight:800;color:var(--primary);}
+  .stat .label{font-size:11px;color:var(--gray-600);margin-top:3px;}
+
+  /* プレビューテーブル */
+  .preview-wrap{margin-top:16px;border-radius:8px;overflow:hidden;border:1px solid var(--gray-200);}
+  .preview-scroll{overflow-x:auto;max-height:260px;overflow-y:auto;}
+  .data-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .data-table th{background:var(--gray-100);padding:8px 12px;text-align:left;font-weight:600;color:var(--gray-600);border-bottom:1px solid var(--gray-200);position:sticky;top:0;white-space:nowrap;}
+  .data-table td{padding:8px 12px;border-bottom:1px solid var(--gray-200);white-space:nowrap;max-width:200px;overflow:hidden;text-overflow:ellipsis;}
+  .data-table tr:last-child td{border-bottom:none;}
+  .data-table tr:hover td{background:var(--gray-50);}
+  .preview-caption{font-size:11px;color:var(--gray-400);padding:8px 12px;background:var(--gray-50);border-top:1px solid var(--gray-200);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">EC</div>
+  <div><h1>楽天 RMS → Shopify 変換 <span>EL COMMUN</span></h1></div>
+</header>
+
+<div class="container">
+
+  <div class="info-box">
+    <strong>処理概要：</strong>楽天RMSからダウンロードしたCSVファイルを、Shopifyのインポート形式に変換します。商品管理番号ごとにバリエーション展開し、画像URLも自動で完全形式に変換します。
+  </div>
+
+  <!-- Step 1 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="step">1</div>
+      <h2>ファイルを選択 <span class="sub">楽天RMSのCSVファイル</span></h2>
+    </div>
+    <div class="card-body">
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" accept=".csv" id="fileInput">
+        <div class="upload-icon">📄</div>
+        <p>クリックまたはドラッグ＆ドロップ</p>
+        <small>楽天RMS CSVファイル（.csv）</small>
+      </div>
+      <div id="fileStatus"></div>
+    </div>
+  </div>
+
+  <!-- Step 2 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="step">2</div>
+      <h2>変換仕様を確認</h2>
+    </div>
+    <div class="card-body">
+      <div class="rule-box">
+        <ul>
+          <li>商品管理番号ごとにグループ化してバリエーション展開</li>
+          <li>商品画像パス1〜20を自動収集・URL形式に変換</li>
+          <li>画像パス（/biiino/〜）を完全なRakuten CDN URLに自動変換</li>
+          <li>SKU管理番号がある行のみバリエーション情報を出力</li>
+          <li>ベンダー名は「EL COMMUN online shop」で統一</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="step">3</div>
+      <h2>変換を実行</h2>
+    </div>
+    <div class="card-body">
+      <button class="primary-btn" id="convertBtn" disabled onclick="runConvert()">
+        ⚙️ Shopify形式に変換する
+      </button>
+      <div class="log-box" id="logBox"></div>
+    </div>
+  </div>
+
+  <!-- 結果 -->
+  <div class="result-section" id="resultSection">
+    <h3>✅ 変換完了！</h3>
+    <button class="dl-btn" id="dlBtn" onclick="downloadCSV()">⬇️ Shopify用CSVをダウンロード</button>
+    <div class="stats-grid" id="statsGrid"></div>
+  </div>
+
+  <!-- プレビュー -->
+  <div id="previewWrap"></div>
+
+</div>
+
+<script>
+  let selectedFile = null;
+  let convertedData = null;
+
+  const uploadZone = document.getElementById('uploadZone');
+  const fileInput  = document.getElementById('fileInput');
+  const fileStatus = document.getElementById('fileStatus');
+  const convertBtn = document.getElementById('convertBtn');
+
+  fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+
+  uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag'); });
+  uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag'));
+  uploadZone.addEventListener('drop', e => {
+    e.preventDefault();
+    uploadZone.classList.remove('drag');
+    handleFile(e.dataTransfer.files[0]);
+  });
+
+  function handleFile(file) {
+    if (!file) return;
+    if (!file.name.endsWith('.csv')) {
+      fileStatus.innerHTML = '<div class="file-status err">❌ CSVファイルを選択してください</div>';
+      return;
+    }
+    selectedFile = file;
+    fileStatus.innerHTML = `<div class="file-status ok">✅ ファイル選択済み：${file.name}（${(file.size/1024).toFixed(1)} KB）</div>`;
+    convertBtn.disabled = false;
+    document.getElementById('resultSection').classList.remove('show');
+    document.getElementById('previewWrap').innerHTML = '';
+    document.getElementById('logBox').innerHTML = '';
+    document.getElementById('logBox').classList.remove('show');
+    convertedData = null;
+  }
+
+  async function runConvert() {
+    if (!selectedFile) return;
+    convertBtn.disabled = true;
+    document.getElementById('resultSection').classList.remove('show');
+    document.getElementById('previewWrap').innerHTML = '';
+    clearLog();
+
+    log('📂 ファイル読み込み中...', 'log-info');
+
+    try {
+      const arrayBuffer = await selectedFile.arrayBuffer();
+      let csvText;
+      try {
+        csvText = new TextDecoder('shift-jis').decode(arrayBuffer);
+      } catch {
+        csvText = new TextDecoder('utf-8').decode(arrayBuffer);
+      }
+
+      const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+      if (!parsed.data || parsed.data.length === 0) throw new Error('CSVにデータが見つかりませんでした');
+
+      log(`✅ ${parsed.data.length} 行を読み込みました`, 'log-ok');
+      log('──────────────────────────────────', 'log-sep');
+      log('🔄 変換処理を開始します...', 'log-info');
+
+      const grouped = _.groupBy(parsed.data, item =>
+        item['商品管理番号（商品URL）'] || item['商品管理番号(商品URL)'] || ''
+      );
+
+      const shopifyData = [];
+      let productCount = 0;
+      let variantCount = 0;
+      let imageCount = 0;
+      let skipCount = 0;
+
+      Object.entries(grouped).forEach(([handleKey, items]) => {
+        if (!handleKey) { skipCount++; return; }
+        const first = items[0];
+        const productName = (first['商品名'] || '').trim().replace(/【dc】/gi, '').trim();
+        if (!productName) { skipCount++; return; }
+
+        const handle = handleKey.trim();
+        const bodyHTML = first['スマートフォン用商品説明文'] || '';
+        const option1Name = first['バリエーション項目名定義'] || 'Title';
+
+        const validVariants = items.filter(item => (item['SKU管理番号'] || '').trim() !== '');
+
+        const images = [];
+        for (let i = 1; i <= 20; i++) {
+          let p = (first[`商品画像パス${i}`] || '').trim();
+          if (!p) continue;
+          if (p.startsWith('/biiino/')) p = 'https://image.rakuten.co.jp/elcommun/cabinet' + p;
+          images.push(p);
+        }
+
+        const totalRows = Math.max(validVariants.length, images.length);
+        for (let i = 0; i < totalRows; i++) {
+          const isFirst = i === 0;
+          const item = i < validVariants.length ? validVariants[i] : null;
+          const imageUrl = i < images.length ? images[i] : '';
+          const option1Value = item ? (item['バリエーション項目選択肢1'] || '').trim() : '';
+          // Variant SKU：メーカー型番があればそれを使用、なければSKU管理番号
+          const sku = (() => {
+            if (!item) return '';
+            for (let n = 1; n <= 100; n++) {
+              if ((item[`商品属性（項目）${n}`] || '').trim() === 'メーカー型番') {
+                const v = (item[`商品属性（値）${n}`] || '').trim();
+                if (v) return v;
+                break;
+              }
+            }
+            return (item['SKU管理番号'] || '');
+          })();
+          const price = item ? (item['通常購入販売価格'] || '') : '';
+          const barcode = item ? (item['カタログID'] || '') : '';
+
+          shopifyData.push({
+            'Handle': handle,
+            'Title': isFirst ? productName : '',
+            'Body (HTML)': isFirst ? bodyHTML : '',
+            'Vendor': isFirst ? 'EL COMMUN online shop' : '',
+            'Product Category': '',
+            'Type': '',
+            'Tags': '',
+            'Published': isFirst ? 'TRUE' : '',
+            'Option1 Name': isFirst ? option1Name : '',
+            'Option1 Value': option1Value,
+            'Option1 Linked To': '',
+            'Option2 Name': '', 'Option2 Value': '', 'Option2 Linked To': '',
+            'Option3 Name': '', 'Option3 Value': '', 'Option3 Linked To': '',
+            'Variant SKU': sku,
+            'Variant Grams': sku ? '1000.0' : '',
+            'Variant Inventory Tracker': sku ? 'shopify' : '',
+            'Variant Inventory Qty': sku ? '0' : '',
+            'Variant Inventory Policy': sku ? 'deny' : '',
+            'Variant Fulfillment Service': sku ? 'manual' : '',
+            'Variant Price': price,
+            'Variant Compare At Price': '',
+            'Variant Requires Shipping': sku ? 'TRUE' : '',
+            'Variant Taxable': sku ? 'TRUE' : '',
+            'Variant Barcode': barcode,
+            'Image Src': imageUrl,
+            'Image Position': imageUrl ? (i + 1).toString() : '',
+            'Image Alt Text': '',
+            'Gift Card': isFirst ? 'FALSE' : '',
+            'SEO Title': '', 'SEO Description': '',
+            'Variant Image': '',
+            'Variant Weight Unit': sku ? 'g' : '',
+            'Variant Tax Code': '',
+            'Cost per item': '',
+            'Status': isFirst ? 'active' : ''
+          });
+          if (imageUrl) imageCount++;
+        }
+        variantCount += validVariants.length;
+        productCount++;
+      });
+
+      const csv = Papa.unparse(shopifyData);
+      convertedData = { data: shopifyData, csv };
+
+      log('──────────────────────────────────', 'log-sep');
+      log(`✅ 変換完了！`, 'log-ok');
+      log(`📦 商品数：${productCount}`, 'log-ok');
+      log(`🎨 バリエーション数：${variantCount}`, 'log-ok');
+      log(`🖼️  画像数：${imageCount}`, 'log-ok');
+      if (skipCount > 0) log(`⚠️ スキップ：${skipCount} 件（商品名なし等）`, 'log-warn');
+      log(`📋 出力行数：${shopifyData.length} 行`, 'log-info');
+
+      document.getElementById('statsGrid').innerHTML = `
+        <div class="stat"><div class="num">${productCount}</div><div class="label">商品数</div></div>
+        <div class="stat"><div class="num">${variantCount}</div><div class="label">バリエーション数</div></div>
+        <div class="stat"><div class="num">${shopifyData.length}</div><div class="label">出力行数</div></div>
+      `;
+      document.getElementById('resultSection').classList.add('show');
+
+      showPreview(shopifyData);
+
+    } catch (err) {
+      log(`❌ エラー：${err.message}`, 'log-err');
+    }
+
+    convertBtn.disabled = false;
+  }
+
+  function downloadCSV() {
+    if (!convertedData) return;
+    const bom = new Uint8Array([0xEF, 0xBB, 0xBF]);
+    const blob = new Blob([bom, convertedData.csv], { type: 'text/csv;charset=utf-8;' });
+    const now = new Date();
+    const ts = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0')
+              + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0');
+    const filename = `shopify_products_${ts}.csv`;
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { document.body.removeChild(a); URL.revokeObjectURL(a.href); }, 100);
+  }
+
+  function showPreview(data) {
+    const rows = data.slice(0, 8);
+    let html = `
+      <div class="card" style="margin-top:0;">
+        <div class="card-header">
+          <div class="step" style="background:var(--gray-600);">👁</div>
+          <h2>変換後プレビュー <span class="sub">先頭8行</span></h2>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div class="preview-wrap">
+            <div class="preview-scroll">
+              <table class="data-table">
+                <thead><tr>
+                  <th>Handle</th><th>Title</th><th>Option1 Value</th>
+                  <th>Variant SKU</th><th>価格</th><th>画像 #</th>
+                </tr></thead>
+                <tbody>
+    `;
+    rows.forEach(row => {
+      html += `<tr>
+        <td title="${row.Handle}">${row.Handle}</td>
+        <td title="${row.Title}">${row.Title || '—'}</td>
+        <td>${row['Option1 Value'] || '—'}</td>
+        <td>${row['Variant SKU'] || '—'}</td>
+        <td>${row['Variant Price'] ? '¥' + Number(row['Variant Price']).toLocaleString() : '—'}</td>
+        <td>${row['Image Position'] || '—'}</td>
+      </tr>`;
+    });
+    html += `</tbody></table></div>
+      <div class="preview-caption">先頭8行を表示（全 ${data.length} 行）</div>
+    </div></div></div>`;
+    document.getElementById('previewWrap').innerHTML = html;
+  }
+
+  function log(msg, cls = '') {
+    const box = document.getElementById('logBox');
+    box.classList.add('show');
+    box.innerHTML += `<div class="${cls}">${msg}</div>`;
+    box.scrollTop = box.scrollHeight;
+  }
+  function clearLog() {
+    const box = document.getElementById('logBox');
+    box.innerHTML = '';
+    box.classList.remove('show');
+  }
+</script>
+</body>
+</html>
