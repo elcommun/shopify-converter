@@ -218,7 +218,11 @@
       Object.entries(grouped).forEach(([handleKey, items]) => {
         if (!handleKey) { skipCount++; return; }
         const first = items[0];
-        const productName = (first['商品名'] || '').trim().replace(/【dc】/gi, '').trim();
+        const productName = (first['商品名'] || '').trim()
+          .replace(/【dc】/gi, '')
+          .replace(/＼P2倍＋クーポン／/g, '')
+          .replace(/＼ポイント2倍＋クーポン／/g, '')
+          .trim();
         if (!productName) { skipCount++; return; }
 
         const handle = handleKey.trim();
