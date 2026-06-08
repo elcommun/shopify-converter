@@ -373,6 +373,13 @@
           })();
           const price = item ? (item['通常購入販売価格'] || '') : '';
           const barcode = item ? (item['カタログID'] || '') : '';
+          // Variant Image：SKU画像パスに画像ベースURLを付与
+          const variantImage = (() => {
+            if (!item) return '';
+            const path = (item['SKU画像パス'] || '').trim();
+            if (!path) return '';
+            return `https://image.rakuten.co.jp/elcommun/cabinet${path}`;
+          })();
 
           shopifyData.push({
             'Handle': handle,
@@ -404,7 +411,7 @@
             'Image Alt Text': '',
             'Gift Card': isFirst ? 'FALSE' : '',
             'SEO Title': '', 'SEO Description': '',
-            'Variant Image': '',
+            'Variant Image': variantImage,
             'Variant Weight Unit': sku ? 'g' : '',
             'Variant Tax Code': '',
             'Cost per item': '',
