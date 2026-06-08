@@ -103,7 +103,7 @@
           <input type="file" accept=".csv" id="catInput">
           <div class="upload-icon">🗂️</div>
           <p>カテゴリCSVをアップロード（任意）</p>
-          <small>dl-item-cat〜.csv（「表示先カテゴリ」からTypeを自動設定）</small>
+          <small>dl-item-cat〜.csv（「表示先カテゴリ」からType・Tagsを自動設定）</small>
         </div>
         <div id="catStatus"></div>
       </div>
@@ -160,6 +160,7 @@
   let selectedFile = null;
   let catFile = null;
   let typeMap = {}; // 商品管理番号 -> Type
+  let tagsMap = {}; // 商品管理番号 -> Tags
   let convertedData = null;
 
   const uploadZone = document.getElementById('uploadZone');
@@ -223,10 +224,12 @@
       if (!parsed.data || parsed.data.length === 0) throw new Error('データが見つかりませんでした');
 
       typeMap = buildTypeMap(parsed.data);
+      tagsMap = buildTagsMap(parsed.data);
       const count = Object.keys(typeMap).length;
-      catStatus.innerHTML = `<div class="file-status ok">✅ ${file.name} を読み込み、${count} 商品のTypeを判定しました</div>`;
+      catStatus.innerHTML = `<div class="file-status ok">✅ ${file.name} を読み込み、${count} 商品のType・Tagsを判定しました</div>`;
     } catch (err) {
       typeMap = {};
+      tagsMap = {};
       catStatus.innerHTML = `<div class="file-status err">❌ エラー：${err.message}</div>`;
     }
   }
@@ -251,6 +254,41 @@
       const best = candidates[0];
       const segments = best.split('\\');
       map[handle] = segments[segments.length - 1].trim();
+    });
+
+    return map;
+  }
+
+  function buildTagsMap(rows) {
+    const byHandle = _.groupBy(rows, r => (r['商品管理番号（商品URL）'] || '').trim());
+    const map = {};
+
+    Object.entries(byHandle).forEach(([handle, items]) => {
+      if (!handle) return;
+
+      const tags = [];
+      const seen = new Set();
+
+      items
+        .map(r => (r['表示先カテゴリ'] || '').trim())
+        .filter(cat => cat)
+        .forEach(cat => {
+          cat.split('\\').forEach(seg => {
+            let word = seg.trim();
+            if (!word) return;
+            if (word === 'メーカー・ブランド') return; // 「メーカー・ブランド」は除外
+            if (word.includes('｜')) {
+              const parts = word.split('｜');
+              word = parts[parts.length - 1].trim(); // 「｜」区切りは最後の要素のみ採用
+            }
+            if (word && !seen.has(word)) {
+              seen.add(word);
+              tags.push(word);
+            }
+          });
+        });
+
+      if (tags.length > 0) map[handle] = tags.join(', ');
     });
 
     return map;
@@ -343,7 +381,7 @@
             'Vendor': isFirst ? 'EL COMMUN online shop' : '',
             'Product Category': '',
             'Type': isFirst ? (typeMap[handle] || '') : '',
-            'Tags': '',
+            'Tags': isFirst ? (tagsMap[handle] || '') : '',
             'Published': isFirst ? 'TRUE' : '',
             'Option1 Name': isFirst ? option1Name : '',
             'Option1 Value': option1Value,
@@ -388,11 +426,13 @@
       log(`🖼️  画像数：${imageCount}`, 'log-ok');
       if (skipCount > 0) log(`⚠️ スキップ：${skipCount} 件（商品名なし等）`, 'log-warn');
       log(`📋 出力行数：${shopifyData.length} 行`, 'log-info');
-      if (Object.keys(typeMap).length > 0) {
+      if (Object.keys(typeMap).length > 0 || Object.keys(tagsMap).length > 0) {
         const typedCount = shopifyData.filter(r => r.Title && r.Type).length;
+        const taggedCount = shopifyData.filter(r => r.Title && r.Tags).length;
         log(`🏷️  Type自動設定：${typedCount} 商品`, 'log-info');
+        log(`🔖 Tags自動設定：${taggedCount} 商品`, 'log-info');
       } else {
-        log(`ℹ️  カテゴリCSV未読み込みのため Type は空欄です`, 'log-warn');
+        log(`ℹ️  カテゴリCSV未読み込みのため Type・Tags は空欄です`, 'log-warn');
       }
 
       document.getElementById('statsGrid').innerHTML = `
