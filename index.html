@@ -216,8 +216,8 @@
     try {
       const buf = await file.arrayBuffer();
       let text;
-      try { text = new TextDecoder('shift-jis').decode(buf); }
-      catch { text = new TextDecoder('utf-8').decode(buf); }
+      try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+      catch { text = new TextDecoder('shift-jis').decode(buf); }
 
       const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
       if (!parsed.data || parsed.data.length === 0) throw new Error('データが見つかりませんでした');
@@ -269,9 +269,9 @@
       const arrayBuffer = await selectedFile.arrayBuffer();
       let csvText;
       try {
-        csvText = new TextDecoder('shift-jis').decode(arrayBuffer);
+        csvText = new TextDecoder('utf-8', { fatal: true }).decode(arrayBuffer);
       } catch {
-        csvText = new TextDecoder('utf-8').decode(arrayBuffer);
+        csvText = new TextDecoder('shift-jis').decode(arrayBuffer);
       }
 
       const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
