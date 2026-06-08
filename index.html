@@ -484,35 +484,34 @@
 
   function showPreview(data) {
     const rows = data.slice(0, 8);
+    if (rows.length === 0) { document.getElementById('previewWrap').innerHTML = ''; return; }
+
+    const columns = Object.keys(rows[0]);
+    const esc = v => String(v == null ? '' : v).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
     let html = `
       <div class="card" style="margin-top:0;">
         <div class="card-header">
           <div class="step" style="background:var(--gray-600);">👁</div>
-          <h2>変換後プレビュー <span class="sub">先頭8行</span></h2>
+          <h2>変換後プレビュー <span class="sub">先頭8行・全${columns.length}列（横スクロールで全項目を確認できます）</span></h2>
         </div>
         <div class="card-body" style="padding:0;">
           <div class="preview-wrap">
             <div class="preview-scroll">
               <table class="data-table">
                 <thead><tr>
-                  <th>Handle</th><th>Title</th><th>Type</th><th>Option1 Value</th>
-                  <th>Variant SKU</th><th>価格</th><th>画像 #</th>
+                  ${columns.map(col => `<th>${esc(col)}</th>`).join('')}
                 </tr></thead>
                 <tbody>
     `;
     rows.forEach(row => {
-      html += `<tr>
-        <td title="${row.Handle}">${row.Handle}</td>
-        <td title="${row.Title}">${row.Title || '—'}</td>
-        <td>${row.Type || '—'}</td>
-        <td>${row['Option1 Value'] || '—'}</td>
-        <td>${row['Variant SKU'] || '—'}</td>
-        <td>${row['Variant Price'] ? '¥' + Number(row['Variant Price']).toLocaleString() : '—'}</td>
-        <td>${row['Image Position'] || '—'}</td>
-      </tr>`;
+      html += `<tr>${columns.map(col => {
+        const v = row[col];
+        return `<td title="${esc(v)}">${v !== '' && v != null ? esc(v) : '—'}</td>`;
+      }).join('')}</tr>`;
     });
     html += `</tbody></table></div>
-      <div class="preview-caption">先頭8行を表示（全 ${data.length} 行）</div>
+      <div class="preview-caption">先頭8行を表示（全 ${data.length} 行 / 全 ${columns.length} 列）</div>
     </div></div></div>`;
     document.getElementById('previewWrap').innerHTML = html;
   }
