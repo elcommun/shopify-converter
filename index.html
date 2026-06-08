@@ -235,8 +235,10 @@
   }
 
   // Type → Shopify標準Product Categoryへのマッピング（必要に応じて追加）
+  // 値はShopify公式タクソノミーの「カテゴリID」（例：os-1-1 = Office Supplies > Book Accessories > Book Covers）
+  // ※ 英語の breadcrumb 文字列だと「無効な商品カテゴリー」警告が出ることがあるため、IDを使用
   const PRODUCT_CATEGORY_MAP = {
-    'ブックカバー': 'Office Supplies > Book Accessories > Book Covers',
+    'ブックカバー': 'os-1-1', // Office Supplies > Book Accessories > Book Covers
   };
 
   // 「表示先カテゴリ」からTypeを判定するマップを作成
