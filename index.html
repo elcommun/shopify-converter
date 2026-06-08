@@ -97,6 +97,16 @@
         <small>楽天RMS CSVファイル（.csv）</small>
       </div>
       <div id="fileStatus"></div>
+
+      <div style="margin-top:20px;">
+        <div class="upload-zone" id="catZone">
+          <input type="file" accept=".csv" id="catInput">
+          <div class="upload-icon">🗂️</div>
+          <p>カテゴリCSVをアップロード（任意）</p>
+          <small>dl-item-cat〜.csv（「表示先カテゴリ」からTypeを自動設定）</small>
+        </div>
+        <div id="catStatus"></div>
+      </div>
     </div>
   </div>
 
@@ -114,6 +124,7 @@
           <li>画像パス（/biiino/〜）を完全なRakuten CDN URLに自動変換</li>
           <li>SKU管理番号がある行のみバリエーション情報を出力</li>
           <li>ベンダー名は「EL COMMUN online shop」で統一</li>
+          <li>カテゴリCSV（dl-item-cat）をアップすると「表示先カテゴリ」の最後の階層を「Type」に自動設定（「メーカー・ブランド」「作家シリーズ」「セール商品」を含むカテゴリは除外し、階層が最も深いものを優先）</li>
         </ul>
       </div>
     </div>
@@ -147,12 +158,18 @@
 
 <script>
   let selectedFile = null;
+  let catFile = null;
+  let typeMap = {}; // 商品管理番号 -> Type
   let convertedData = null;
 
   const uploadZone = document.getElementById('uploadZone');
   const fileInput  = document.getElementById('fileInput');
   const fileStatus = document.getElementById('fileStatus');
   const convertBtn = document.getElementById('convertBtn');
+
+  const catZone   = document.getElementById('catZone');
+  const catInput  = document.getElementById('catInput');
+  const catStatus = document.getElementById('catStatus');
 
   fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
 
@@ -162,6 +179,15 @@
     e.preventDefault();
     uploadZone.classList.remove('drag');
     handleFile(e.dataTransfer.files[0]);
+  });
+
+  catInput.addEventListener('change', e => handleCatFile(e.target.files[0]));
+  catZone.addEventListener('dragover', e => { e.preventDefault(); catZone.classList.add('drag'); });
+  catZone.addEventListener('dragleave', () => catZone.classList.remove('drag'));
+  catZone.addEventListener('drop', e => {
+    e.preventDefault();
+    catZone.classList.remove('drag');
+    handleCatFile(e.dataTransfer.files[0]);
   });
 
   function handleFile(file) {
@@ -178,6 +204,56 @@
     document.getElementById('logBox').innerHTML = '';
     document.getElementById('logBox').classList.remove('show');
     convertedData = null;
+  }
+
+  async function handleCatFile(file) {
+    if (!file) return;
+    if (!file.name.endsWith('.csv')) {
+      catStatus.innerHTML = '<div class="file-status err">❌ CSVファイルを選択してください</div>';
+      return;
+    }
+    catFile = file;
+    try {
+      const buf = await file.arrayBuffer();
+      let text;
+      try { text = new TextDecoder('shift-jis').decode(buf); }
+      catch { text = new TextDecoder('utf-8').decode(buf); }
+
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      if (!parsed.data || parsed.data.length === 0) throw new Error('データが見つかりませんでした');
+
+      typeMap = buildTypeMap(parsed.data);
+      const count = Object.keys(typeMap).length;
+      catStatus.innerHTML = `<div class="file-status ok">✅ ${file.name} を読み込み、${count} 商品のTypeを判定しました</div>`;
+    } catch (err) {
+      typeMap = {};
+      catStatus.innerHTML = `<div class="file-status err">❌ エラー：${err.message}</div>`;
+    }
+  }
+
+  // 「表示先カテゴリ」からTypeを判定するマップを作成
+  function buildTypeMap(rows) {
+    const byHandle = _.groupBy(rows, r => (r['商品管理番号（商品URL）'] || '').trim());
+    const map = {};
+
+    Object.entries(byHandle).forEach(([handle, items]) => {
+      if (!handle) return;
+
+      // 除外対象を取り除く
+      const candidates = items
+        .map(r => (r['表示先カテゴリ'] || '').trim())
+        .filter(cat => cat && !cat.includes('メーカー・ブランド\\') && !cat.includes('作家シリーズ\\') && !cat.includes('セール商品'));
+
+      if (candidates.length === 0) return;
+
+      // 階層が最も深い（\の数が多い）ものを優先
+      candidates.sort((a, b) => (b.split('\\').length - a.split('\\').length));
+      const best = candidates[0];
+      const segments = best.split('\\');
+      map[handle] = segments[segments.length - 1].trim();
+    });
+
+    return map;
   }
 
   async function runConvert() {
@@ -266,7 +342,7 @@
             'Body (HTML)': isFirst ? bodyHTML : '',
             'Vendor': isFirst ? 'EL COMMUN online shop' : '',
             'Product Category': '',
-            'Type': '',
+            'Type': isFirst ? (typeMap[handle] || '') : '',
             'Tags': '',
             'Published': isFirst ? 'TRUE' : '',
             'Option1 Name': isFirst ? option1Name : '',
@@ -312,6 +388,12 @@
       log(`🖼️  画像数：${imageCount}`, 'log-ok');
       if (skipCount > 0) log(`⚠️ スキップ：${skipCount} 件（商品名なし等）`, 'log-warn');
       log(`📋 出力行数：${shopifyData.length} 行`, 'log-info');
+      if (Object.keys(typeMap).length > 0) {
+        const typedCount = shopifyData.filter(r => r.Title && r.Type).length;
+        log(`🏷️  Type自動設定：${typedCount} 商品`, 'log-info');
+      } else {
+        log(`ℹ️  カテゴリCSV未読み込みのため Type は空欄です`, 'log-warn');
+      }
 
       document.getElementById('statsGrid').innerHTML = `
         <div class="stat"><div class="num">${productCount}</div><div class="label">商品数</div></div>
@@ -358,7 +440,7 @@
             <div class="preview-scroll">
               <table class="data-table">
                 <thead><tr>
-                  <th>Handle</th><th>Title</th><th>Option1 Value</th>
+                  <th>Handle</th><th>Title</th><th>Type</th><th>Option1 Value</th>
                   <th>Variant SKU</th><th>価格</th><th>画像 #</th>
                 </tr></thead>
                 <tbody>
@@ -367,6 +449,7 @@
       html += `<tr>
         <td title="${row.Handle}">${row.Handle}</td>
         <td title="${row.Title}">${row.Title || '—'}</td>
+        <td>${row.Type || '—'}</td>
         <td>${row['Option1 Value'] || '—'}</td>
         <td>${row['Variant SKU'] || '—'}</td>
         <td>${row['Variant Price'] ? '¥' + Number(row['Variant Price']).toLocaleString() : '—'}</td>
