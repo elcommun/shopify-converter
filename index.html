@@ -234,6 +234,11 @@
     }
   }
 
+  // Type → Shopify標準Product Categoryへのマッピング（必要に応じて追加）
+  const PRODUCT_CATEGORY_MAP = {
+    'ブックカバー': 'Office Supplies > Book Accessories > Book Covers',
+  };
+
   // 「表示先カテゴリ」からTypeを判定するマップを作成
   function buildTypeMap(rows) {
     const byHandle = _.groupBy(rows, r => (r['商品管理番号（商品URL）'] || '').trim());
@@ -386,7 +391,7 @@
             'Title': isFirst ? productName : '',
             'Body (HTML)': isFirst ? bodyHTML : '',
             'Vendor': isFirst ? 'EL COMMUN online shop' : '',
-            'Product Category': '',
+            'Product Category': isFirst ? (PRODUCT_CATEGORY_MAP[typeMap[handle]] || '') : '',
             'Type': isFirst ? (typeMap[handle] || '') : '',
             'Tags': isFirst ? (tagsMap[handle] || '') : '',
             'Published': isFirst ? 'TRUE' : '',
@@ -415,7 +420,8 @@
             'Variant Weight Unit': sku ? 'g' : '',
             'Variant Tax Code': '',
             'Cost per item': '',
-            'Status': isFirst ? 'active' : ''
+            'Status': isFirst ? 'active' : '',
+            'Collection': isFirst ? (typeMap[handle] || '') : ''
           });
           if (imageUrl) imageCount++;
         }
