@@ -242,7 +242,7 @@
       // 除外対象を取り除く
       const candidates = items
         .map(r => (r['表示先カテゴリ'] || '').trim())
-        .filter(cat => cat && !cat.includes('メーカー・ブランド\\') && !cat.includes('作家シリーズ\\') && !cat.includes('セール商品'));
+        .filter(cat => cat && !cat.includes('メーカー・ブランド') && !cat.includes('作家シリーズ') && !cat.includes('セール商品'));
 
       if (candidates.length === 0) return;
 

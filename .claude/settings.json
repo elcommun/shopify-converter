@@ -1,0 +1,21 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git *)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cd /Users/kazukioguri/Desktop/アプリ作成/shopify-converter && git add -A && git commit -m 'Auto-update index.html' && git push 2>&1 || true",
+            "statusMessage": "GitHubに自動プッシュ中..."
+          }
+        ]
+      }
+    ]
+  }
+}
