@@ -121,7 +121,7 @@
         <ul>
           <li>商品管理番号ごとにグループ化してバリエーション展開</li>
           <li>商品画像パス1〜20を自動収集・URL形式に変換</li>
-          <li>画像パス（/biiino/〜）を完全なRakuten CDN URLに自動変換</li>
+          <li>画像パス（/〜）を完全なRakuten CDN URLに自動変換</li>
           <li>SKU管理番号がある行のみバリエーション情報を出力</li>
           <li>ベンダー名は「EL COMMUN online shop」で統一</li>
           <li>カテゴリCSV（dl-item-cat）をアップすると「表示先カテゴリ」の最後の階層を「Type」に自動設定（「メーカー・ブランド」「作家シリーズ」「セール商品」を含むカテゴリは除外し、階層が最も深いものを優先）</li>
@@ -382,7 +382,7 @@
         for (let i = 1; i <= 20; i++) {
           let p = (first[`商品画像パス${i}`] || '').trim();
           if (!p) continue;
-          if (p.startsWith('/biiino/')) p = 'https://image.rakuten.co.jp/elcommun/cabinet' + p;
+          if (p.startsWith('/')) p = 'https://image.rakuten.co.jp/elcommun/cabinet' + p;
           images.push(p);
         }
 
