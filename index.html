@@ -282,9 +282,11 @@
 
       if (candidates.length === 0) return;
 
+      // 半角・全角どちらのバックスラッシュにも対応して正規化
+      const normalize = s => s.replace(/＼/g, '\\');
       // 階層が最も深い（\の数が多い）ものを優先
-      candidates.sort((a, b) => (b.split('\\').length - a.split('\\').length));
-      const best = candidates[0];
+      candidates.sort((a, b) => (normalize(b).split('\\').length - normalize(a).split('\\').length));
+      const best = normalize(candidates[0]);
       const segments = best.split('\\');
       map[handle] = segments[segments.length - 1].trim();
     });
@@ -306,7 +308,8 @@
         .map(r => (r['表示先カテゴリ'] || '').trim())
         .filter(cat => cat)
         .forEach(cat => {
-          cat.split('\\').forEach(seg => {
+          // 全角バックスラッシュ（＼）を半角に正規化してから分割
+          cat.replace(/＼/g, '\\').split('\\').forEach(seg => {
             let word = seg.trim();
             if (!word) return;
             if (word === 'メーカー・ブランド') return; // 「メーカー・ブランド」は除外
