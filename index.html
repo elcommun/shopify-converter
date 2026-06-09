@@ -238,7 +238,33 @@
   // 値はShopify公式タクソノミーの「カテゴリID」（例：os-1-1 = Office Supplies > Book Accessories > Book Covers）
   // ※ 英語の breadcrumb 文字列だと「無効な商品カテゴリー」警告が出ることがあるため、IDを使用
   const PRODUCT_CATEGORY_MAP = {
-    'ブックカバー': 'os-1-1', // Office Supplies > Book Accessories > Book Covers
+    // ステーショナリー系
+    'ブックカバー':      'os-1-1',      // Office Supplies > Book Accessories > Book Covers
+    'ブックマーク・しおり': 'os-1-4',   // Office Supplies > Book Accessories > Bookmarks
+    'ノート・メモ帳':    'os-4-9-9',    // Office Supplies > General Office Supplies > Paper Products > Notebooks & Notepads
+    'ペンケース':        'os-3-16',     // Office Supplies > Filing & Organization > Pen & Pencil Cases
+    'ペン':             'os-11-11-7-3', // Office Supplies > Office Instruments > Writing & Drawing Instruments > Pens & Pencils > Pens
+    'クリアファイル':    'os-3-12',     // Office Supplies > Filing & Organization > File Folders
+    'マスキングテープ': 'ae-2-1-2-5-3', // Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts > ... > Decorative Tape
+    'レターセット':      'os-4-9-13',   // Office Supplies > General Office Supplies > Paper Products > Stationery
+    // バッグ・ポーチ系
+    'トートバッグ':      'aa-5-4-18',   // Apparel & Accessories > Handbags, Wallets & Cases > Handbags > Shopper Bags
+    'エコバッグ':        'aa-5-4-18',   // Apparel & Accessories > Handbags, Wallets & Cases > Handbags > Shopper Bags
+    'ポーチ・ケース':    'lb-3',        // Luggage & Bags > Cosmetic & Toiletry Bags
+    // キッチン・食器系
+    'マグカップ・グラス': 'hg-11-10-5', // Home & Garden > Kitchen & Dining > Tableware > Drinkware
+    'プレート・ボウル':  'hg-11-10-4',  // Home & Garden > Kitchen & Dining > Tableware > Dinnerware
+    '食器':             'hg-11-10',    // Home & Garden > Kitchen & Dining > Tableware
+    'お弁当グッズ':      'hg-11-3-7-5', // Home & Garden > Kitchen & Dining > Food & Beverage Carriers > Lunch Boxes & Totes > Bento Boxes
+    // 電子機器系
+    'モバイルバッテリー': 'el-7-15-5-1', // Electronics > Electronics Accessories > Power > Power Adapters & Chargers > Power Banks
+    'ガジェット':        'el',           // Electronics
+    // インテリア・雑貨系
+    '壁掛け時計':        'hg-3-17-4',   // Home & Garden > Decor > Clocks > Wall Clocks
+    '置き時計':          'hg-3-17-2-1', // Home & Garden > Decor > Clocks > Desk & Shelf Clocks > Desk Clocks
+    '収納用品':          'hg-10-16',    // Home & Garden > Household Supplies > Storage & Organization
+    'デコレーション用品': 'hg-3',        // Home & Garden > Decor
+    'ギフト用品':        'ae-3-1-5',    // Arts & Entertainment > Party & Celebration > Gift Giving > Gift Wrapping
   };
 
   // 「表示先カテゴリ」からTypeを判定するマップを作成
