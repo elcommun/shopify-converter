@@ -281,6 +281,18 @@
     '衛生用品':          'hb-3',        // Health & Beauty > Personal Care
   };
 
+  // 「配送方法セット管理番号」＋「送料区分1」の組み合わせ → ShopifyのTagsに追加するタグ
+  // キーは "配送方法セット管理番号_送料区分1"
+  const SHIPPING_TAG_MAP = {
+    '2_4': 'ゆうメール',
+    '2_1': 'ゆうメールF',
+    '5_2': 'ゆうパケ',
+    '5_5': 'ゆうパケF',
+    '1_4': '宅配便',
+    '1_6': '宅配便F',
+    '4_4': '大型宅配便',
+  };
+
   // 「表示先カテゴリ」からTypeを判定するマップを作成
   function buildTypeMap(rows) {
     const byHandle = _.groupBy(rows, r => (r['商品管理番号（商品URL）'] || '').trim());
@@ -393,6 +405,15 @@
         const bodyHTML = first['スマートフォン用商品説明文'] || '';
         const option1Name = first['バリエーション項目名定義'] || 'Title';
 
+        // 配送方法セット管理番号＋送料区分1 から配送タグを判定し、Tagsの末尾に追加
+        const shippingKey = `${(first['配送方法セット管理番号'] || '').trim()}_${(first['送料区分1'] || '').trim()}`;
+        const shippingTag = SHIPPING_TAG_MAP[shippingKey] || '';
+        const tagsForHandle = (() => {
+          const base = tagsMap[handle] || '';
+          if (!shippingTag) return base;
+          return base ? `${base}, ${shippingTag}` : shippingTag;
+        })();
+
         const validVariants = items.filter(item => (item['SKU管理番号'] || '').trim() !== '');
 
         const images = [];
@@ -438,7 +459,7 @@
             'Vendor': isFirst ? 'EL COMMUN online shop' : '',
             'Product Category': isFirst ? (PRODUCT_CATEGORY_MAP[typeMap[handle]] || '') : '',
             'Type': isFirst ? (typeMap[handle] || '') : '',
-            'Tags': isFirst ? (tagsMap[handle] || '') : '',
+            'Tags': isFirst ? tagsForHandle : '',
             'Published': isFirst ? 'TRUE' : '',
             'Option1 Name': isFirst ? option1Name : '',
             'Option1 Value': option1Value,
