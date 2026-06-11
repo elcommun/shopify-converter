@@ -405,16 +405,17 @@
         const bodyHTML = first['スマートフォン用商品説明文'] || '';
         const option1Name = first['バリエーション項目名定義'] || 'Title';
 
+        const validVariants = items.filter(item => (item['SKU管理番号'] || '').trim() !== '');
+
         // 配送方法セット管理番号＋送料区分1 から配送タグを判定し、Tagsの末尾に追加
-        const shippingKey = `${(first['配送方法セット管理番号'] || '').trim()}_${(first['送料区分1'] || '').trim()}`;
+        const shippingSource = validVariants[0] || first;
+        const shippingKey = `${(shippingSource['配送方法セット管理番号'] || '').trim()}_${(shippingSource['送料区分1'] || '').trim()}`;
         const shippingTag = SHIPPING_TAG_MAP[shippingKey] || '';
         const tagsForHandle = (() => {
           const base = tagsMap[handle] || '';
           if (!shippingTag) return base;
           return base ? `${base}, ${shippingTag}` : shippingTag;
         })();
-
-        const validVariants = items.filter(item => (item['SKU管理番号'] || '').trim() !== '');
 
         const images = [];
         for (let i = 1; i <= 20; i++) {
