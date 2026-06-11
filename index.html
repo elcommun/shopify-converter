@@ -285,6 +285,7 @@
     '手帳・ダイアリー': 'os-3-5-3',    // Office Supplies > Filing & Organization > Calendars, Organizers & Planners > Planners
     'ブローチ・ワッペン': 'aa-6-4',    // Apparel & Accessories > Jewelry > Brooches & Lapel Pins
     'スポーツ用品':      'sg',         // Sporting Goods
+    'フレーム（額縁）':  'hg-3-52',    // Home & Garden > Decor > Picture Frames
   };
 
   // 「配送方法セット管理番号」＋「送料区分1」の組み合わせ → ShopifyのTagsに追加するタグ
@@ -396,6 +397,7 @@
       let variantCount = 0;
       let imageCount = 0;
       let skipCount = 0;
+      const categoryIssues = []; // Type未設定 または Product Category未対応の商品
 
       Object.entries(grouped).forEach(([handleKey, items]) => {
         if (!handleKey) { skipCount++; return; }
@@ -410,6 +412,14 @@
         const handle = handleKey.trim();
         const bodyHTML = first['スマートフォン用商品説明文'] || '';
         const option1Name = first['バリエーション項目名定義'] || 'Title';
+
+        // Type未設定 または Product Category未対応のチェック
+        const productType = typeMap[handle] || '';
+        if (!productType) {
+          categoryIssues.push(`${productName}（${handle}）：Typeが空欄です`);
+        } else if (!PRODUCT_CATEGORY_MAP[productType]) {
+          categoryIssues.push(`${productName}（${handle}）：Type「${productType}」がProduct Categoryに未対応です`);
+        }
 
         const validVariants = items.filter(item => (item['SKU管理番号'] || '').trim() !== '');
 
@@ -519,6 +529,12 @@
         log(`🔖 Tags自動設定：${taggedCount} 商品`, 'log-info');
       } else {
         log(`ℹ️  カテゴリCSV未読み込みのため Type・Tags は空欄です`, 'log-warn');
+      }
+
+      if (categoryIssues.length > 0) {
+        log('──────────────────────────────────', 'log-sep');
+        log(`❌ Type・Product Category 未対応：${categoryIssues.length} 件`, 'log-err');
+        categoryIssues.forEach(msg => log(`　・${msg}`, 'log-err'));
       }
 
       document.getElementById('statsGrid').innerHTML = `
