@@ -426,7 +426,7 @@
         // 配送方法セット管理番号＋送料区分1 から配送タグを判定し、Tagsの末尾に追加
         const shippingSource = validVariants[0] || first;
         const shippingKey = `${(shippingSource['配送方法セット管理番号'] || '').trim()}_${(shippingSource['送料区分1'] || '').trim()}`;
-        const shippingTag = SHIPPING_TAG_MAP[shippingKey] || '';
+        const shippingTag = SHIPPING_TAG_MAP[shippingKey] || '宅配便';
         const tagsForHandle = (() => {
           const base = tagsMap[handle] || '';
           if (!shippingTag) return base;
