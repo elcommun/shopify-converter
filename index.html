@@ -515,6 +515,14 @@
       const csv = Papa.unparse(shopifyData);
       convertedData = { data: shopifyData, csv };
 
+      if (productCount > 0 && shopifyData.length === 0) {
+        log('──────────────────────────────────', 'log-sep');
+        log('❌ 出力データが0件です。「商品情報（normal-item.csv）」と「カテゴリ（item-cat.csv）」のファイルが入れ替わっていないか確認してください。', 'log-err');
+        convertedData = null;
+        convertBtn.disabled = false;
+        return;
+      }
+
       log('──────────────────────────────────', 'log-sep');
       log(`✅ 変換完了！`, 'log-ok');
       log(`📦 商品数：${productCount}`, 'log-ok');
