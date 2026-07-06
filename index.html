@@ -68,6 +68,10 @@
   .data-table tr:last-child td{border-bottom:none;}
   .data-table tr:hover td{background:var(--gray-50);}
   .preview-caption{font-size:11px;color:var(--gray-400);padding:8px 12px;background:var(--gray-50);border-top:1px solid var(--gray-200);}
+  .option-row{display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--primary-light);border:1px solid #FCCBAF;border-radius:8px;margin-top:12px;font-size:13px;color:#92400E;}
+  .option-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;}
+  .option-row label{cursor:pointer;font-weight:600;line-height:1.4;}
+  .option-row .opt-sub{font-weight:400;color:var(--gray-600);margin-left:4px;}
 </style>
 </head>
 <body>
@@ -126,6 +130,10 @@
           <li>ベンダー名は「EL COMMUN online shop」で統一</li>
           <li>カテゴリCSV（dl-item-cat）をアップすると「表示先カテゴリ」の最後の階層を「Type」に自動設定（「メーカー・ブランド」「作家シリーズ」「セール商品」を含むカテゴリは除外し、階層が最も深いものを優先）</li>
         </ul>
+      </div>
+      <div class="option-row">
+        <input type="checkbox" id="titleSplitChk" checked>
+        <label for="titleSplitChk">タイトルを分解してタグ・SEOタイトルに振り分ける<span class="opt-sub">（「商品名｜キーワード｜ブランド」形式を自動解析）</span></label>
       </div>
     </div>
   </div>
@@ -302,6 +310,68 @@
     '4_4': '大型宅配便',
   };
 
+  // ===== タイトル分解ロジック =====
+
+  const DISCARD = new Set([
+    'おしゃれ','かわいい','可愛い','上品','シンプル','大人','個性的','ユニーク',
+    'カラフル','ポップ','モダン','かっこいい','無骨','レトロ','華やか','気軽',
+    '大きめ','小さめ','コンパクト','大容量','スリム','ミニ','便利',
+    '高校生','中学生','女子','男子','子供','キッズ','メンズ',
+    '仕事','勉強','通勤','通学','入学','メール便対応','定型内','定形内','郵送不可',
+    'デコ',
+  ]);
+  const GIFT_WORDS = new Set(['ギフト','プレゼント','贈り物','お祝い','誕生日','母の日','プチギフト']);
+  const KEEP_EN = new Set(['UFO','UMA']);
+  const BRAND_MAP = {
+    'SERATA セラータ':          ['SERATA','プレジール'],
+    'MATOKA マトカ':            ['マトカ'],
+    'LEAFLETS リーフレッツ':    ['リーフレッツ'],
+    'LEAFLETS':                 ['リーフレッツ'],
+    'EL COMMUN エルコミューン': [],
+    'AMPERSAND FACTORY':        ['アンパサンドファクトリー'],
+  };
+  const MATERIALS = new Set(['美濃焼','瀬戸焼','陶器','磁器','日本製','帆布','刺繍','キャンバス','箔押し','活版印刷','和紙','木製']);
+
+  function splitProductTitle(raw) {
+    // 『』内の｜を保護してから分割
+    const protected_ = raw.replace(/『([^』]*)』/g, (m, inner) =>
+      `『${inner.replace(/[｜|]/g, '／')}』`);
+    const blocks = protected_.split(/[｜|]/).map(s => s.trim()).filter(Boolean);
+    if (blocks.length === 1) return { title: raw.trim(), keywords: [], brand: '', brandRaw: '' };
+    const title = blocks[0];
+    const lastRaw = blocks[blocks.length - 1].replace(/【[^】]*】/g, '').trim();
+    const isBrand = blocks.length >= 3 || Object.prototype.hasOwnProperty.call(BRAND_MAP, lastRaw);
+    const brandRaw = isBrand ? lastRaw : '';
+    const kwBlocks = blocks.slice(1, isBrand ? -1 : undefined);
+    const keywords = kwBlocks.join(' ').split(/[\s　]+/).filter(Boolean);
+    return { title, keywords, brand: brandRaw, brandRaw };
+  }
+
+  function classifyKeywords(keywords, existingTags) {
+    const tags = [];
+    const seen = new Set(existingTags);
+    let hasGift = false;
+    for (let kw of keywords) {
+      kw = kw.normalize('NFKC').trim();
+      if (!kw || DISCARD.has(kw)) continue;
+      if (/^\d+(ml|l|mm|cm|g)$/i.test(kw)) continue;
+      if (/^[A-Za-z]+$/.test(kw) && !KEEP_EN.has(kw.toUpperCase())) continue;
+      if (GIFT_WORDS.has(kw)) { hasGift = true; continue; }
+      if (!seen.has(kw)) { seen.add(kw); tags.push(kw); }
+    }
+    if (hasGift && !seen.has('ギフト')) tags.push('ギフト');
+    return tags;
+  }
+
+  function buildSeoTitle(title, newTags, brandRaw) {
+    const mats = newTags.filter(t => MATERIALS.has(t)).slice(0, 2);
+    const catTag = newTags.find(t => !MATERIALS.has(t)) || '';
+    const parts = [title, ...mats, catTag].filter(Boolean);
+    let seo = parts.join(' ') + (brandRaw ? `｜${brandRaw}` : '');
+    if (seo.length > 60) seo = (title + (brandRaw ? `｜${brandRaw}` : '')).slice(0, 60);
+    return seo;
+  }
+
   // 「表示先カテゴリ」からTypeを判定するマップを作成
   function buildTypeMap(rows) {
     const byHandle = _.groupBy(rows, r => (r['商品管理番号（商品URL）'] || '').trim());
@@ -399,12 +469,16 @@
       let variantCount = 0;
       let imageCount = 0;
       let skipCount = 0;
+      let titleSplitCount = 0;
+      let titleTagTotal = 0;
       const categoryIssues = []; // Type未設定 または Product Category未対応の商品
+      const doTitleSplit = document.getElementById('titleSplitChk').checked;
 
       Object.entries(grouped).forEach(([handleKey, items]) => {
         if (!handleKey) { skipCount++; return; }
         const first = items[0];
-        const productName = (first['商品名'] || '').trim()
+        const originalTitle = (first['商品名'] || '').trim();
+        const productName = originalTitle
           .replace(/【dc】/gi, '')
           .replace(/＼P2倍＋クーポン／/g, '')
           .replace(/＼ポイント2倍＋クーポン／/g, '')
@@ -428,12 +502,39 @@
         // 配送方法セット管理番号＋送料区分1 から配送タグを判定し、Tagsの末尾に追加
         const shippingSource = validVariants[0] || first;
         const shippingKey = `${(shippingSource['配送方法セット管理番号'] || '').trim()}_${(shippingSource['送料区分1'] || '').trim()}`;
-        const shippingTag = SHIPPING_TAG_MAP[shippingKey] || '宅配便';
-        const tagsForHandle = (() => {
+        const shippingTag = SHIPPING_TAG_MAP[shippingKey] || '宅配便P';
+        const baseTagsStr = (() => {
           const base = tagsMap[handle] || '';
-          if (!shippingTag) return base;
           return base ? `${base}, ${shippingTag}` : shippingTag;
         })();
+
+        // タイトル分解
+        let finalTitle = productName;
+        let finalTags = baseTagsStr;
+        let seoTitle = '';
+        if (doTitleSplit) {
+          const { title, keywords, brandRaw } = splitProductTitle(productName);
+          finalTitle = title;
+          const existingSet = new Set(baseTagsStr.split(',').map(t => t.trim()).filter(Boolean));
+          const newKwTags = classifyKeywords(keywords, existingSet);
+          // ブランドタグを解決
+          const brandTags = brandRaw
+            ? (Object.prototype.hasOwnProperty.call(BRAND_MAP, brandRaw)
+                ? BRAND_MAP[brandRaw]
+                : [brandRaw])
+            : [];
+          const brandTagsFiltered = brandTags.filter(t => t && !existingSet.has(t) && !new Set(newKwTags).has(t));
+          const allNewTags = [...newKwTags, ...brandTagsFiltered];
+          // タグ総数30上限
+          const existingCount = existingSet.size;
+          const trimmed = allNewTags.slice(0, Math.max(0, 30 - existingCount));
+          finalTags = [...existingSet, ...trimmed].join(', ');
+          seoTitle = buildSeoTitle(title, [...newKwTags], brandRaw);
+          if (keywords.length > 0 || brandRaw) {
+            titleSplitCount++;
+            titleTagTotal += trimmed.length;
+          }
+        }
 
         const images = [];
         for (let i = 1; i <= 20; i++) {
@@ -473,12 +574,12 @@
 
           shopifyData.push({
             'Handle': handle,
-            'Title': isFirst ? productName : '',
+            'Title': isFirst ? finalTitle : '',
             'Body (HTML)': isFirst ? bodyHTML : '',
             'Vendor': isFirst ? 'EL COMMUN online shop' : '',
             'Product Category': isFirst ? (PRODUCT_CATEGORY_MAP[typeMap[handle]] || '') : '',
             'Type': isFirst ? (typeMap[handle] || '') : '',
-            'Tags': isFirst ? tagsForHandle : '',
+            'Tags': isFirst ? finalTags : '',
             'Published': isFirst ? 'TRUE' : '',
             'Option1 Name': isFirst ? option1Name : '',
             'Option1 Value': option1Value,
@@ -500,13 +601,15 @@
             'Image Position': imageUrl ? (i + 1).toString() : '',
             'Image Alt Text': '',
             'Gift Card': isFirst ? 'FALSE' : '',
-            'SEO Title': '', 'SEO Description': '',
+            'SEO Title': isFirst ? seoTitle : '',
+            'SEO Description': '',
             'Variant Image': variantImage,
             'Variant Weight Unit': sku ? 'g' : '',
             'Variant Tax Code': '',
             'Cost per item': '',
             'Status': isFirst ? 'active' : '',
-            'Collection': isFirst ? (typeMap[handle] || '') : ''
+            'Collection': isFirst ? (typeMap[handle] || '') : '',
+            'Metafield: custom.original_title [single_line_text_field]': isFirst ? originalTitle : '',
           });
           if (imageUrl) imageCount++;
         }
@@ -531,6 +634,10 @@
       log(`🎨 バリエーション数：${variantCount}`, 'log-ok');
       log(`🖼️  画像数：${imageCount}`, 'log-ok');
       if (skipCount > 0) log(`⚠️ スキップ：${skipCount} 件（商品名なし等）`, 'log-warn');
+      if (doTitleSplit && titleSplitCount > 0) {
+        const avgTags = (titleTagTotal / titleSplitCount).toFixed(1);
+        log(`✂️  タイトル分解：${titleSplitCount} 件 / タグ追加：平均 ${avgTags} 個/商品`, 'log-ok');
+      }
       log(`📋 出力行数：${shopifyData.length} 行`, 'log-info');
       if (Object.keys(typeMap).length > 0 || Object.keys(tagsMap).length > 0) {
         const typedCount = shopifyData.filter(r => r.Title && r.Type).length;
