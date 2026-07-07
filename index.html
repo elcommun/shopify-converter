@@ -332,6 +332,63 @@
   };
   const MATERIALS = new Set(['美濃焼','瀬戸焼','陶器','磁器','日本製','帆布','刺繍','キャンバス','箔押し','活版印刷','和紙','木製']);
 
+  // ===== 楽天カテゴリリンク → Shopifyコレクションリンク 対応表 =====
+  const CATEGORY_LINK_MAP = {
+    "https://item.rakuten.co.jp/elcommun/c/0000000700/": "https://elcommun.com/collections/4月始まり-b6-ウィークリー-レフト式-17時間ホリゾンタル",
+    "https://item.rakuten.co.jp/elcommun/c/0000000701/": "https://elcommun.com/collections/4月始まり-b6-ウィークリー-ブロック式",
+    "https://item.rakuten.co.jp/elcommun/c/0000000702/": "https://elcommun.com/collections/4月始まり-b6-マンスリー-スタンダード",
+    "https://item.rakuten.co.jp/elcommun/c/0000000703/": "https://elcommun.com/collections/4月始まり-b6-マンスリー-フルカラー",
+    "https://item.rakuten.co.jp/elcommun/c/0000000699/": "https://elcommun.com/collections/4月始まり-新書-マンスリー",
+    "https://item.rakuten.co.jp/elcommun/c/0000001125/": "https://elcommun.com/collections/4月始まりダイアリー",
+    "https://item.rakuten.co.jp/elcommun/c/0000000474/": "https://elcommun.com/collections/手帳-ダイアリー",
+    "https://item.rakuten.co.jp/elcommun/c/0000001081/": "https://elcommun.com/collections/卓上カレンダー",
+    "https://item.rakuten.co.jp/elcommun/c/0000001082/": "https://elcommun.com/collections/壁掛けカレンダー",
+    "https://item.rakuten.co.jp/elcommun/c/0000000860/": "https://elcommun.com/collections/カレンダー",
+    "https://item.rakuten.co.jp/elcommun/c/0000001449/": "https://elcommun.com/collections/卓上カレンダー-マンスリー-リングタイプ",
+    "https://item.rakuten.co.jp/elcommun/c/0000001120/": "https://elcommun.com/collections/卓上カレンダー-ウィークリー-リングタイプ",
+    "https://item.rakuten.co.jp/elcommun/c/0000001447/": "https://elcommun.com/collections/壁掛けカレンダー-マンスリー-リングタイプ",
+    "https://item.rakuten.co.jp/elcommun/c/0000001448/": "https://elcommun.com/collections/壁掛けカレンダー-マンスリー-タンザックタイプ",
+    "https://item.rakuten.co.jp/elcommun/c/0000001450/": "https://elcommun.com/collections/卓上カレンダー-マンスリー-木製スタンドタイプ",
+    "https://item.rakuten.co.jp/elcommun/c/0000000964/": "https://elcommun.com/collections/ブックカバー",
+    "https://item.rakuten.co.jp/elcommun/c/0000000884/": "https://elcommun.com/collections/プレート-ボウル",
+    "https://item.rakuten.co.jp/elcommun/c/0000001036/": "https://elcommun.com/collections/食器",
+    "https://item.rakuten.co.jp/elcommun/c/0000000883/": "https://elcommun.com/collections/マグカップ-グラス",
+    "https://item.rakuten.co.jp/elcommun/c/0000000664/": "https://elcommun.com/collections/ギフト用品",
+    "https://item.rakuten.co.jp/elcommun/c/0000000862/": "https://elcommun.com/collections/マスキングテープ",
+    "https://item.rakuten.co.jp/elcommun/c/0000001103/": "https://elcommun.com/collections/デコレーション用品",
+    "https://item.rakuten.co.jp/elcommun/c/0000000471/": "https://elcommun.com/collections/ペンケース",
+    "https://item.rakuten.co.jp/elcommun/c/0000001075/": "https://elcommun.com/collections/壁掛け時計",
+    "https://item.rakuten.co.jp/elcommun/c/0000000534/": "https://elcommun.com/collections/収納用品",
+    "https://item.rakuten.co.jp/elcommun/c/0000000665/": "https://elcommun.com/collections/レターセット",
+    "https://item.rakuten.co.jp/elcommun/c/0000001114/": "https://elcommun.com/collections/ブックマーク-しおり",
+    "https://item.rakuten.co.jp/elcommun/c/0000000935/": "https://elcommun.com/collections/ペン",
+    "https://item.rakuten.co.jp/elcommun/c/0000000533/": "https://elcommun.com/collections/クリアファイル",
+    "https://item.rakuten.co.jp/elcommun/c/0000000962/": "https://elcommun.com/collections/ポーチ-ケース",
+    "https://item.rakuten.co.jp/elcommun/c/0000001013/": "https://elcommun.com/collections/エコバッグ",
+    "https://item.rakuten.co.jp/elcommun/c/0000000555/": "https://elcommun.com/collections/お弁当グッズ",
+    "https://item.rakuten.co.jp/elcommun/c/0000000481/": "https://elcommun.com/collections/トートバッグ",
+    "https://item.rakuten.co.jp/elcommun/c/0000000383/": "https://elcommun.com/collections/ノート-メモ帳",
+    "https://item.rakuten.co.jp/elcommun/c/0000001076/": "https://elcommun.com/collections/置き時計",
+    "https://item.rakuten.co.jp/elcommun/c/0000000524/": "https://elcommun.com/collections/ショッピングバッグ",
+    "https://item.rakuten.co.jp/elcommun/c/0000000938/": "https://elcommun.com/collections/ミニポスター",
+    "https://item.rakuten.co.jp/elcommun/c/0000000801/": "https://elcommun.com/collections/祝儀袋-ポチ袋",
+    "https://item.rakuten.co.jp/elcommun/c/0000000509/": "https://elcommun.com/collections/ふせん",
+    "https://item.rakuten.co.jp/elcommun/c/0000000934/": "https://elcommun.com/collections/グリーティングカード",
+    "https://item.rakuten.co.jp/elcommun/c/0000000483/": "https://elcommun.com/collections/デスクトップ",
+    "https://item.rakuten.co.jp/elcommun/c/0000001445/": "https://elcommun.com/collections/キーホルダー",
+    "https://item.rakuten.co.jp/elcommun/c/0000000885/": "https://elcommun.com/collections/キッチンファブリック",
+    "https://item.rakuten.co.jp/elcommun/c/0000000944/": "https://elcommun.com/collections/衛生用品",
+    "https://item.rakuten.co.jp/elcommun/c/0000000479/": "https://elcommun.com/collections/ショルダーバッグ",
+    "https://item.rakuten.co.jp/elcommun/c/0000000692/": "https://elcommun.com/collections/ブローチ-ワッペン",
+    "https://item.rakuten.co.jp/elcommun/c/0000000122/": "https://elcommun.com/collections/フレーム-額縁",
+    "https://item.rakuten.co.jp/elcommun/c/0000000946/": "https://elcommun.com/collections/レジャーシート",
+    "https://item.rakuten.co.jp/elcommun/c/0000000937/": "https://elcommun.com/collections/照明",
+    "https://item.rakuten.co.jp/elcommun/c/0000000950/": "https://elcommun.com/collections/メガネケース",
+    "https://item.rakuten.co.jp/elcommun/c/0000001060/": "https://elcommun.com/collections/ワンポイント",
+    "https://item.rakuten.co.jp/elcommun/c/0000001118/": "https://elcommun.com/collections/マスターピース",
+  };
+  const CATEGORY_LINK_RE = /https?:\/\/item\.rakuten\.co\.jp\/elcommun\/c\/[0-9]+\/?/g;
+
   // ===== Excel通貨誤変換の検出・復元 =====
   // 例：型番「BND-001」がExcel/Numbersで開かれると通貨コード（ブルネイドル）と誤認識され
   //     「-BND 1.00」「-BND?1.00」のような形に化けてしまう。楽天CSVがExcel等で
@@ -487,6 +544,7 @@
       let titleTagTotal = 0;
       const categoryIssues = []; // Type未設定 または Product Category未対応の商品
       const skuRepairs = []; // Excel通貨誤変換から自動復元したSKU
+      const categoryLinkIssues = []; // 対応表に無い楽天カテゴリリンク
       const doTitleSplit = document.getElementById('titleSplitChk').checked;
 
       Object.entries(grouped).forEach(([handleKey, items]) => {
@@ -501,8 +559,17 @@
         if (!productName) { skipCount++; return; }
 
         const handle = handleKey.trim();
-        const bodyHTML = (first['スマートフォン用商品説明文'] || '')
-          .replace(/https?:\/\/item\.rakuten\.co\.jp\/elcommun\//g, 'https://elcommun.com/products/');
+        // ① 楽天カテゴリリンク（/c/）を対応表でShopifyコレクションリンクに変換（商品リンク変換より必ず先に行う）
+        const bodyAfterCategory = (first['スマートフォン用商品説明文'] || '')
+          .replace(CATEGORY_LINK_RE, (url) => {
+            const mapped = CATEGORY_LINK_MAP[url];
+            if (mapped) return mapped;
+            categoryLinkIssues.push(`${productName}（${handle}）：対応表に無いカテゴリリンク「${url}」`);
+            return url;
+          });
+        // ② 楽天商品ページリンクをShopify商品ページリンクに変換（カテゴリリンク/c/は対象外）
+        const bodyHTML = bodyAfterCategory
+          .replace(/https?:\/\/item\.rakuten\.co\.jp\/elcommun\/(?!c\/)/g, 'https://elcommun.com/products/');
         const option1Name = first['バリエーション項目名定義'] || 'Title';
 
         // Type未設定 または Product Category未対応のチェック
@@ -681,6 +748,12 @@
         log(`⚠️ Variant SKUをExcel通貨変換の誤りとみなし自動復元：${skuRepairs.length} 件（必ず内容を確認してください）`, 'log-warn');
         skuRepairs.forEach(msg => log(`　・${msg}`, 'log-warn'));
         log('　※元の楽天CSVがExcel/Numbers等で開かれ通貨として誤変換された可能性があります。可能であれば元データを再取得してください。', 'log-warn');
+      }
+
+      if (categoryLinkIssues.length > 0) {
+        log('──────────────────────────────────', 'log-sep');
+        log(`❌ 対応表に無い楽天カテゴリリンク：${categoryLinkIssues.length} 件（Shopifyコレクションリンクに変換できていません）`, 'log-err');
+        categoryLinkIssues.forEach(msg => log(`　・${msg}`, 'log-err'));
       }
 
       document.getElementById('statsGrid').innerHTML = `
