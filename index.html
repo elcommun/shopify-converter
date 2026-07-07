@@ -332,6 +332,20 @@
   };
   const MATERIALS = new Set(['美濃焼','瀬戸焼','陶器','磁器','日本製','帆布','刺繍','キャンバス','箔押し','活版印刷','和紙','木製']);
 
+  // ===== Excel通貨誤変換の検出・復元 =====
+  // 例：型番「BND-001」がExcel/Numbersで開かれると通貨コード（ブルネイドル）と誤認識され
+  //     「-BND 1.00」「-BND?1.00」のような形に化けてしまう。楽天CSVがExcel等で
+  //     開いて保存されたことがある場合にこの現象が起きるため、パターン検知して復元する。
+  const CURRENCY_MANGLE_RE = /^-\s*([A-Za-z]{3})[^0-9]*([0-9]+)(?:\.[0-9]+)?$/;
+  function repairCurrencyMangledCode(raw) {
+    const s = (raw || '').trim();
+    const m = s.match(CURRENCY_MANGLE_RE);
+    if (!m) return null;
+    const code = m[1].toUpperCase();
+    const digits = m[2].padStart(3, '0');
+    return { original: s, repaired: `${code}-${digits}` };
+  }
+
   function splitProductTitle(raw) {
     // 『』内の｜を保護してから分割
     const protected_ = raw.replace(/『([^』]*)』/g, (m, inner) =>
@@ -472,6 +486,7 @@
       let titleSplitCount = 0;
       let titleTagTotal = 0;
       const categoryIssues = []; // Type未設定 または Product Category未対応の商品
+      const skuRepairs = []; // Excel通貨誤変換から自動復元したSKU
       const doTitleSplit = document.getElementById('titleSplitChk').checked;
 
       Object.entries(grouped).forEach(([handleKey, items]) => {
@@ -553,14 +568,20 @@
           // Variant SKU：メーカー型番があればそれを使用、なければSKU管理番号
           const sku = (() => {
             if (!item) return '';
+            let raw = '';
             for (let n = 1; n <= 100; n++) {
               if ((item[`商品属性（項目）${n}`] || '').trim() === 'メーカー型番') {
-                const v = (item[`商品属性（値）${n}`] || '').trim();
-                if (v) return v;
+                raw = (item[`商品属性（値）${n}`] || '').trim();
                 break;
               }
             }
-            return (item['SKU管理番号'] || '');
+            if (!raw) raw = (item['SKU管理番号'] || '');
+            const repair = repairCurrencyMangledCode(raw);
+            if (repair) {
+              skuRepairs.push(`${productName}（${handle}）：「${repair.original}」→「${repair.repaired}」`);
+              return repair.repaired;
+            }
+            return raw;
           })();
           const price = item ? (item['通常購入販売価格'] || '') : '';
           const barcode = item ? (item['カタログID'] || '') : '';
@@ -652,6 +673,13 @@
         log('──────────────────────────────────', 'log-sep');
         log(`❌ Type・Product Category 未対応：${categoryIssues.length} 件`, 'log-err');
         categoryIssues.forEach(msg => log(`　・${msg}`, 'log-err'));
+      }
+
+      if (skuRepairs.length > 0) {
+        log('──────────────────────────────────', 'log-sep');
+        log(`⚠️ Variant SKUをExcel通貨変換の誤りとみなし自動復元：${skuRepairs.length} 件（必ず内容を確認してください）`, 'log-warn');
+        skuRepairs.forEach(msg => log(`　・${msg}`, 'log-warn'));
+        log('　※元の楽天CSVがExcel/Numbers等で開かれ通貨として誤変換された可能性があります。可能であれば元データを再取得してください。', 'log-warn');
       }
 
       document.getElementById('statsGrid').innerHTML = `
