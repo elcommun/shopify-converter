@@ -501,7 +501,8 @@
         if (!productName) { skipCount++; return; }
 
         const handle = handleKey.trim();
-        const bodyHTML = first['スマートフォン用商品説明文'] || '';
+        const bodyHTML = (first['スマートフォン用商品説明文'] || '')
+          .replace(/https?:\/\/item\.rakuten\.co\.jp\/elcommun\//g, 'https://elcommun.com/products/');
         const option1Name = first['バリエーション項目名定義'] || 'Title';
 
         // Type未設定 または Product Category未対応のチェック
