@@ -550,12 +550,14 @@
       Object.entries(grouped).forEach(([handleKey, items]) => {
         if (!handleKey) { skipCount++; return; }
         const first = items[0];
-        const originalTitle = (first['商品名'] || '').trim();
-        const productName = originalTitle
+        // 「＼P2倍＋クーポン／」「【7月下旬 新色入荷！】」等のキャンペーン装飾を除去
+        // （Metafield: custom.original_titleにもTitleにも含めない）
+        const originalTitle = (first['商品名'] || '').trim()
+          .replace(/＼[^／]*／/g, '')
           .replace(/【dc】/gi, '')
-          .replace(/＼P2倍＋クーポン／/g, '')
-          .replace(/＼ポイント2倍＋クーポン／/g, '')
+          .replace(/【[^】]*(?:入荷|新色|新作|セール|SALE|予約|キャンペーン|クーポン|ポイント|増量|数量限定|期間限定|送料無料|先着|割引|OFF|%)[^】]*】/gi, '')
           .trim();
+        const productName = originalTitle;
         if (!productName) { skipCount++; return; }
 
         const handle = handleKey.trim();
