@@ -574,6 +574,11 @@
           .replace(/https?:\/\/item\.rakuten\.co\.jp\/elcommun\/(?!c\/)/g, 'https://elcommun.com/products/');
         const option1Name = first['バリエーション項目名定義'] || 'Title';
 
+        // ジャンルID「111167」は表示先カテゴリに関わらずType「手帳・ダイアリー」（Product Category: os-3-5-3）に固定
+        if ((first['ジャンルID'] || '').trim() === '111167') {
+          typeMap[handle] = '手帳・ダイアリー';
+        }
+
         // Type未設定 または Product Category未対応のチェック
         const productType = typeMap[handle] || '';
         if (!productType) {
