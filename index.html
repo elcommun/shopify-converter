@@ -439,7 +439,8 @@
       kw = kw.replace(/[()（）]/g, '').trim(); // カッコは中身だけ残し記号は除去
       if (!kw || DISCARD.has(kw)) continue;
       if (/^\d+(ml|l|mm|cm|g)$/i.test(kw)) continue;
-      if (/^[A-Za-z]+$/.test(kw) && !KEEP_EN.has(kw.toUpperCase())) continue;
+      if (/^[0-9]+$/.test(kw)) continue; // 数字のみの羅列
+      if (/^[A-Za-z]+$/.test(kw) && !KEEP_EN.has(kw.toUpperCase())) continue; // アルファベットのみの羅列
       if (GIFT_WORDS.has(kw)) { hasGift = true; continue; }
       if (!seen.has(kw)) { seen.add(kw); tags.push(kw); }
     }
