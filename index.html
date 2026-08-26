@@ -436,6 +436,7 @@
     let hasGift = false;
     for (let kw of keywords) {
       kw = kw.normalize('NFKC').trim();
+      kw = kw.replace(/[()（）]/g, '').trim(); // カッコは中身だけ残し記号は除去
       if (!kw || DISCARD.has(kw)) continue;
       if (/^\d+(ml|l|mm|cm|g)$/i.test(kw)) continue;
       if (/^[A-Za-z]+$/.test(kw) && !KEEP_EN.has(kw.toUpperCase())) continue;
