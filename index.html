@@ -298,17 +298,21 @@
     '照明':            'bi-24-3-2',   // Business & Industrial > Signage > Electric Signs > Neon Signs（ネオンライト用）
   };
 
-  // 「配送方法セット管理番号」＋「送料区分1」の組み合わせ → ShopifyのTagsに追加するタグ
-  // キーは "配送方法セット管理番号_送料区分1"
-  const SHIPPING_TAG_MAP = {
-    '2_4': 'ゆうメールP',
-    '2_1': 'ゆうメールF',
-    '5_2': 'ゆうパケP',
-    '5_5': 'ゆうパケF',
-    '1_4': '宅配便P',
-    '1_6': '宅配便F',
-    '4_4': '大型宅配便',
-  };
+  // 「配送方法セット管理番号」（"含む"で判定）＋「送料区分1」の組み合わせ → ShopifyのTagsに追加するタグ
+  function resolveShippingTag(setNumberRaw, feeCategoryRaw) {
+    const setNumber = (setNumberRaw || '').trim();
+    const feeCategory = (feeCategoryRaw || '').trim();
+    const has = (digit) => setNumber.includes(digit);
+    const isOneOrEmpty = setNumber === '' || has('1');
+
+    if (has('2') && feeCategory === '1') return 'ゆうメールF';
+    if (has('5') && (feeCategory === '5' || feeCategory === '6')) return 'ゆうパケF';
+    if (has('2') && (feeCategory === '2' || feeCategory === '4')) return 'ゆうメールP';
+    if (has('5') && (feeCategory === '2' || feeCategory === '4')) return 'ゆうパケP';
+    if (isOneOrEmpty && feeCategory === '4') return '宅配便P';
+    if (isOneOrEmpty && feeCategory === '6') return '宅配便F';
+    return '宅配便P'; // どれにも当てはまらない場合のデフォルト
+  }
 
   // ===== タイトル分解ロジック =====
 
@@ -605,8 +609,7 @@
 
         // 配送方法セット管理番号＋送料区分1 から配送タグを判定し、Tagsの末尾に追加
         const shippingSource = validVariants[0] || first;
-        const shippingKey = `${(shippingSource['配送方法セット管理番号'] || '').trim()}_${(shippingSource['送料区分1'] || '').trim()}`;
-        const shippingTag = SHIPPING_TAG_MAP[shippingKey] || '宅配便P';
+        const shippingTag = resolveShippingTag(shippingSource['配送方法セット管理番号'], shippingSource['送料区分1']);
         const baseTagsStr = (() => {
           const base = tagsMap[handle] || '';
           return base ? `${base}, ${shippingTag}` : shippingTag;
