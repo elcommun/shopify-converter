@@ -311,7 +311,7 @@
     if (has('5') && (feeCategory === '2' || feeCategory === '4')) return 'ゆうパケP';
     if (isOneOrEmpty && feeCategory === '4') return '宅配便P';
     if (isOneOrEmpty && feeCategory === '6') return '宅配便F';
-    return '宅配便P'; // どれにも当てはまらない場合のデフォルト
+    return 'デフォルト'; // どれにも当てはまらない場合
   }
 
   // ===== タイトル分解ロジック =====
