@@ -854,10 +854,9 @@
     return { original: s, repaired: `${code}-${digits}` };
   }
 
-  // 手帳・カレンダーはデザイン名『』までが商品を区別する情報のため、
-  // 通常の「最初の｜まで」ではなく「最初の』まで」をTitleとして残す
-  const DIARY_CALENDAR_TYPES = new Set(['手帳・ダイアリー', 'カレンダー', '卓上カレンダー', '壁掛けカレンダー']);
-  function splitDiaryOrCalendarTitle(raw) {
+  // デザイン名『』を含むタイトルは『』の閉じ括弧までが商品を区別する情報のため、
+  // 通常の「最初の｜まで」ではなく「最初の』まで」をTitleとして残す（全Type対象）
+  function splitTitleAtClosingBracket(raw) {
     const closeIdx = raw.indexOf('』');
     if (closeIdx === -1) return null;
     const title = raw.slice(0, closeIdx + 1).trim();
@@ -1073,9 +1072,8 @@
         let finalTags = baseTagsStr;
         let seoTitle = '';
         if (doTitleSplit) {
-          const isDiaryOrCalendar = DIARY_CALENDAR_TYPES.has(productType);
           const { title, keywords, brandRaw } =
-            (isDiaryOrCalendar && splitDiaryOrCalendarTitle(productName)) || splitProductTitle(productName);
+            splitTitleAtClosingBracket(productName) || splitProductTitle(productName);
           finalTitle = title;
           const existingSet = new Set(baseTagsStr.split(',').map(t => t.trim()).filter(Boolean));
           const newKwTags = classifyKeywords(keywords, existingSet);
