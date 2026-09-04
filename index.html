@@ -143,7 +143,7 @@
       </div>
       <div class="option-row">
         <input type="checkbox" id="linkCleanChk" checked>
-        <label for="linkCleanChk">説明文のリンク切れブロックを削除<span class="opt-sub">（今回のCSV・Shopify登録済み商品に無い商品や楽天専用ページへのリンクを含むブロックを除去）</span></label>
+        <label for="linkCleanChk">説明文のリンク切れブロックを削除<span class="opt-sub">（Shopify登録済み商品CSVのHandleに無い商品や楽天専用ページへのリンクを含むブロックを除去。登録済みCSV未アップ時は今回のCSV内の商品で判定）</span></label>
       </div>
       <div class="option-row">
         <input type="checkbox" id="titleSplitChk" checked>
@@ -1265,9 +1265,12 @@
       let removedBlockCount = 0;
       let linkCleanedProducts = 0;
 
-      // リンク生存判定用：今回のCSVの商品 ＋ Shopify登録済み商品（どちらも末尾ハイフン除去で比較）
+      // リンク生存判定用（末尾ハイフン除去で比較）：
+      // Shopify登録済み商品CSVがあればそのHandle列のみを正とする。無ければ今回のCSV内の商品で判定。
       const validHandles = new Set(registeredHandles);
-      Object.keys(grouped).forEach(h => { if (h) validHandles.add(normalizeHandle(h.trim())); });
+      if (validHandles.size === 0) {
+        Object.keys(grouped).forEach(h => { if (h) validHandles.add(normalizeHandle(h.trim())); });
+      }
 
       // 説明文を <font size="4"> 見出し単位のブロックに分割し、
       // リンク切れ（未登録商品・楽天GOLDページ）を含むブロックを削除する
