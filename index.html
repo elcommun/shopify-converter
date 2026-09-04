@@ -298,6 +298,161 @@
     '照明':            'bi-24-3-2',   // Business & Industrial > Signage > Electric Signs > Neon Signs（ネオンライト用）
   };
 
+  // Shopifyコレクション一覧（Collection列はここに含まれる文言のみ出力する、139件）
+  const COLLECTION_SET = new Set([
+    "ステーショナリー",
+    "MATOKA｜マトカ",
+    "手帳・ダイアリー",
+    "MATOKA 2026年10月始まりダイアリー",
+    "ワンポイント",
+    "MATOKA 2026年4月始まりダイアリー",
+    "限定商品",
+    "ギフト用品",
+    "ポーチ・小物入れ",
+    "ペンケース",
+    "2026年10月始まり【B6】マンスリー｜ フルカラー（背景色や飾り枠が毎月変化）",
+    "マスターピース",
+    "2026年10月始まり【新書】マンスリー",
+    "ファッション雑貨",
+    "2026年10月始まり【B6】ウィークリー｜ブロック式（日記 や ToDoリストに最適）",
+    "作家シリーズ",
+    "レターセット",
+    "ブックカバー",
+    "2026年10月始まり【B6】マンスリー｜スタンダード（B6サイズの定番マンスリー）",
+    "新商品",
+    "2026年4月始まり【B6】ウィークリー｜ブロック式（日記 や ToDoリストに最適）",
+    "グリーティングカード",
+    "バッグ",
+    "2026年4月始まり【B6】マンスリー｜ フルカラー（背景色や飾り枠が毎月変化）",
+    "2026年10月始まり【B6】ウィークリー｜レフト式（17時間ホリゾンタル表記）",
+    "SUVANT",
+    "LEAFLETS｜リーフレッツ",
+    "2026年4月始まり【新書】マンスリー",
+    "ノート・メモ帳",
+    "OBAKE｜おばけ",
+    "2026年10月始まり【ミニサイズ】ブロック式",
+    "デコレーション用品",
+    "レジャーバッグ",
+    "保冷グッズ",
+    "LAURIER｜ローリエ",
+    "2026年4月始まり【B6】ウィークリー｜レフト式（17時間ホリゾンタル表記）",
+    "Break Time｜ブレイクタイム",
+    "アート・美術",
+    "松尾ミユキ",
+    "シール・ステッカー",
+    "ショッピングバッグ",
+    "アウトドア雑貨",
+    "お弁当グッズ",
+    "エコバッグ",
+    "クリアファイル",
+    "KIGURUMI｜着ぐるみ",
+    "2026年4月始まり【B6】マンスリー｜スタンダード（B6サイズの定番マンスリー）",
+    "祝儀袋・ポチ袋",
+    "DOODLE｜ドゥードゥル",
+    "AH LA LA｜アララ",
+    "キッチン雑貨",
+    "インテリア",
+    "ブックマーク・しおり",
+    "TICKLE｜ティックル",
+    "お気に入り",
+    "エジプシャン",
+    "mois et fleurs｜モワ・エ・フルール",
+    "マスキングテープ",
+    "ふせん",
+    "goyururi｜ごゆるり",
+    "joyeux｜ジョワイユ",
+    "いわしまあゆ",
+    "ミニポスター",
+    "PETIT ET GRAND｜プティ・エ・グラン",
+    "Plaisir｜プレジール",
+    "食器",
+    "RECIPE｜レシピ",
+    "BONHEUR｜ボヌール",
+    "SUCRE｜シュクレ",
+    "デスクトップ",
+    "COTOMO｜コトモ",
+    "キーホルダー",
+    "CLAIR｜クレール",
+    "Lucia｜ルチア",
+    "ショルダーバッグ",
+    "プレート・ボウル",
+    "CHARME｜シャルム",
+    "ハンカチ",
+    "時計",
+    "マグカップ・ティーカップ",
+    "LEO LIONNI｜レオ・レオニ",
+    "PRINTEMPS｜プランタン",
+    "アーティストクロック",
+    "マグカップ",
+    "メガネケース",
+    "アートフレーム",
+    "LINDEN｜リンデン",
+    "カトラリー",
+    "NORDLYS｜ノールリス",
+    "壁掛け時計",
+    "ポストカード",
+    "piilo｜ピーロ",
+    "トートバッグ",
+    "アクセサリー",
+    "ブローチ・ワッペン",
+    "PETRA BOASE｜ペトラボーズ",
+    "RESFEBER｜レースフェーベル",
+    "ペン",
+    "エリックカール",
+    "置き時計",
+    "プレート",
+    "収納小物",
+    "MITE｜ミーテ",
+    "KOTELO｜コテロ",
+    "衛生用品",
+    "Placid｜プラシド",
+    "FENSTER｜フェンスター",
+    "ボウル",
+    "キッチンファブリック",
+    "FISH CASE｜フィッシュケース",
+    "RECHERCHE｜ルシェルシェ",
+    "AMPERSAND FACTORY｜アンパサンドファクトリー",
+    "TRONCO｜トロンコ",
+    "レジャーシート",
+    "フレーム（額縁）",
+    "HYGGE｜ヒュッゲ",
+    "TRAFFIC｜トラフィック",
+    "NeXtime｜ネクスタイム",
+    "Bijou｜ビジュー",
+    "SORTIR｜ソルティール",
+    "財布",
+    "BAUHAUS｜バウハウス",
+    "SYLVAN｜シルヴァン",
+    "CARVING｜カービング",
+    "照明",
+    "PEANUTS",
+    "リュック",
+    "minimini｜ミニミニ",
+    "壁掛けカレンダー・マンスリー｜リングタイプ",
+    "卓上カレンダー・マンスリー｜リングタイプ",
+    "カレンダー",
+    "壁掛けカレンダー・マンスリー｜タンザックタイプ",
+    "gr?ce｜グラース",
+    "卓上カレンダー",
+    "卓上カレンダー・マンスリー｜木製スタンドタイプ",
+    "卓上カレンダー・ウィークリー｜リングタイプ",
+    "壁掛けカレンダー",
+    "MY Darlin｜マイダーリン",
+    "クリップボード",
+  ]);
+  // Type名がコレクション一覧と表記違いの場合の読み替え
+  const COLLECTION_ALIAS = {
+    'ポーチ・ケース': 'ポーチ・小物入れ',
+    'マグカップ・グラス': 'マグカップ・ティーカップ',
+    '収納用品': '収納小物',
+  };
+  // Collection列はコレクション一覧に含まれる文言のみ出力（一致しなければ空欄）
+  function resolveCollection(type) {
+    if (!type) return '';
+    if (COLLECTION_SET.has(type)) return type;
+    return COLLECTION_ALIAS[type] || '';
+  }
+
   // 楽天ジャンルID → Shopify Product Category 対応表（id-henkan.csv由来、135件）
   const GENRE_CATEGORY_MAP = {
     '100487':'aa-6-9','100636':'hg-3-57','100663':'hb-3-10-12-2','100976':'hb-3-2-5-1','101238':'hg-3-4-2-1','101845':'hg-10-16','101846':'lb','101872':'os-11',
@@ -1009,6 +1164,7 @@
       const categoryIssues = []; // Type未設定 または Product Category未対応の商品
       const skuRepairs = []; // Excel通貨誤変換から自動復元したSKU
       const categoryLinkIssues = []; // 対応表に無い楽天カテゴリリンク
+      const collectionMissing = new Set(); // コレクション一覧に無いType（Collection空欄）
       const doTitleSplit = document.getElementById('titleSplitChk').checked;
 
       Object.entries(grouped).forEach(([handleKey, items]) => {
@@ -1055,6 +1211,9 @@
           categoryIssues.push(`${productName}（${handle}）：Typeが空欄です`);
         } else if (!genreCategory && !PRODUCT_CATEGORY_MAP[productType]) {
           categoryIssues.push(`${productName}（${handle}）：ジャンルID「${genreId}」が対応表に無く、Type「${productType}」もProduct Categoryに未対応です`);
+        }
+        if (productType && !resolveCollection(productType)) {
+          collectionMissing.add(productType);
         }
 
         const validVariants = items.filter(item => (item['SKU管理番号'] || '').trim() !== '');
@@ -1174,7 +1333,7 @@
             'Variant Tax Code': '',
             'Cost per item': '',
             'Status': isFirst ? 'active' : '',
-            'Collection': isFirst ? (typeMap[handle] || '') : '',
+            'Collection': isFirst ? resolveCollection(typeMap[handle] || '') : '',
             'Metafield: custom.original_title [single_line_text_field]': isFirst ? originalTitle : '',
           });
           if (imageUrl) imageCount++;
@@ -1231,6 +1390,12 @@
         log('──────────────────────────────────', 'log-sep');
         log(`❌ 対応表に無い楽天カテゴリリンク：${categoryLinkIssues.length} 件（Shopifyコレクションリンクに変換できていません）`, 'log-err');
         categoryLinkIssues.forEach(msg => log(`　・${msg}`, 'log-err'));
+      }
+
+      if (collectionMissing.size > 0) {
+        log('──────────────────────────────────', 'log-sep');
+        log(`⚠️ コレクション一覧に無いType：${collectionMissing.size} 種（Collection列は空欄になります）`, 'log-warn');
+        collectionMissing.forEach(t => log(`　・${t}`, 'log-warn'));
       }
 
       document.getElementById('statsGrid').innerHTML = `
