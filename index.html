@@ -1264,6 +1264,7 @@
       const doLinkClean = document.getElementById('linkCleanChk').checked;
       let removedBlockCount = 0;
       let linkCleanedProducts = 0;
+      const removedLinkTargets = new Set(); // 削除したリンク先（確認用）
 
       // リンク生存判定用（末尾ハイフン除去で比較）：
       // Shopify登録済み商品CSVがあればそのHandle列のみを正とする。無ければ今回のCSV内の商品で判定。
@@ -1278,6 +1279,13 @@
         const m = u.match(/^https?:\/\/item\.rakuten\.co\.jp\/elcommun\/(?!c\/)([^/?#"]+)/);
         return !!m && !validHandles.has(normalizeHandle(m[1]));
       }
+      // 削除したリンク先を記録（後でログに一覧表示して誤削除に気付けるようにする）
+      function recordBroken(urls) {
+        urls.filter(isBrokenUrl).forEach(u => {
+          const m = u.match(/^https?:\/\/item\.rakuten\.co\.jp\/elcommun\/(?!c\/)([^/?#"]+)/);
+          removedLinkTargets.add(m ? normalizeHandle(m[1]) : '楽天GOLDページ');
+        });
+      }
 
       // 説明文を <font size="4"> 見出し単位のブロックに分割し、
       // Handle一覧に無い商品・楽天GOLDページへのリンクだけを商品単位で削除する。
@@ -1291,6 +1299,7 @@
           const brokenCount = urls.filter(isBrokenUrl).length;
           if (brokenCount === 0) return block;
           removed += brokenCount;
+          recordBroken(urls);
           if (brokenCount === urls.length) return ''; // 有効リンクが残らないブロックは丸ごと削除
           // 混在ブロック：関連商品グリッド（全セルがバナーリンク<a><img>のtable）は
           // 壊れたセルだけ除去して3列で組み直す
@@ -1531,6 +1540,14 @@
         log(`🧹 リンク切れブロック削除：${removedBlockCount} ブロック（${linkCleanedProducts} 商品）`, 'log-ok');
         if (registeredHandles.size === 0) {
           log('　※Shopify登録済み商品CSV未読み込みのため、今回のCSV内の商品のみ有効リンクと判定しています', 'log-warn');
+        } else {
+          log(`　※登録済み ${registeredHandles.size} 商品のHandleを有効リンクとして判定`, 'log-info');
+        }
+        if (removedLinkTargets.size > 0) {
+          const targets = [...removedLinkTargets].sort();
+          const shown = targets.slice(0, 40);
+          log(`　削除したリンク先（${removedLinkTargets.size} 種）※誤って自社商品が含まれていないか確認してください：`, 'log-warn');
+          log(`　　${shown.join(' / ')}${targets.length > 40 ? ` …他${targets.length - 40}件` : ''}`, 'log-warn');
         }
       }
       log(`📋 出力行数：${shopifyData.length} 行`, 'log-info');
