@@ -183,6 +183,7 @@
   let catFile = null;
   let typeMap = {}; // 商品管理番号 -> Type
   let tagsMap = {}; // 商品管理番号 -> Tags
+  let calendarCollectionMap = {}; // 商品管理番号 -> カレンダー用Collection名
   let convertedData = null;
 
   const uploadZone = document.getElementById('uploadZone');
@@ -290,11 +291,13 @@
 
       typeMap = buildTypeMap(parsed.data);
       tagsMap = buildTagsMap(parsed.data);
+      calendarCollectionMap = buildCalendarCollectionMap(parsed.data);
       const count = Object.keys(typeMap).length;
       catStatus.innerHTML = `<div class="file-status ok">✅ ${file.name} を読み込み、${count} 商品のType・Tagsを判定しました</div>`;
     } catch (err) {
       typeMap = {};
       tagsMap = {};
+      calendarCollectionMap = {};
       catStatus.innerHTML = `<div class="file-status err">❌ エラー：${err.message}</div>`;
     }
   }
@@ -1146,6 +1149,41 @@
     return map;
   }
 
+  // カレンダー商品は表示先カテゴリのフルパスから専用のCollection名を組み立てる
+  // （末端カテゴリ「リングタイプ」等だけではコレクション一覧と一致しないため）
+  function calendarCollectionFromPath(path) {
+    if (path.includes('壁掛けカレンダー')) {
+      if (path.includes('タンザックタイプ')) return '壁掛けカレンダー・マンスリー｜タンザックタイプ';
+      if (path.includes('リングタイプ')) return '壁掛けカレンダー・マンスリー｜リングタイプ';
+      return '';
+    }
+    if (path.includes('卓上カレンダー')) {
+      if (path.includes('ウィークリー')) return '卓上カレンダー・ウィークリー｜リングタイプ';
+      if (path.includes('木製スタンドタイプ')) return '卓上カレンダー・マンスリー｜木製スタンドタイプ';
+      if (path.includes('マンスリー')) return '卓上カレンダー・マンスリー｜リングタイプ';
+      return '';
+    }
+    return '';
+  }
+
+  function buildCalendarCollectionMap(rows) {
+    const byHandle = _.groupBy(rows, r => (r['商品管理番号（商品URL）'] || '').trim());
+    const map = {};
+    Object.entries(byHandle).forEach(([handle, items]) => {
+      if (!handle) return;
+      const paths = items
+        .map(r => (r['表示先カテゴリ'] || '').trim().replace(/＼/g, '\\'))
+        .filter(p => p.includes('カレンダー'));
+      // 階層が深いパスを優先して判定
+      paths.sort((a, b) => b.split('\\').length - a.split('\\').length);
+      for (const p of paths) {
+        const col = calendarCollectionFromPath(p);
+        if (col) { map[handle] = col; break; }
+      }
+    });
+    return map;
+  }
+
   function buildTagsMap(rows) {
     const byHandle = _.groupBy(rows, r => (r['商品管理番号（商品URL）'] || '').trim());
     const map = {};
@@ -1306,7 +1344,7 @@
         } else if (!genreCategory && !PRODUCT_CATEGORY_MAP[productType]) {
           categoryIssues.push(`${productName}（${handle}）：ジャンルID「${genreId}」が対応表に無く、Type「${productType}」もProduct Categoryに未対応です`);
         }
-        if (productType && !resolveCollection(productType)) {
+        if (productType && !calendarCollectionMap[handle] && !resolveCollection(productType)) {
           collectionMissing.add(productType);
         }
 
@@ -1427,7 +1465,7 @@
             'Variant Tax Code': '',
             'Cost per item': '',
             'Status': isFirst ? 'active' : '',
-            'Collection': isFirst ? resolveCollection(typeMap[handle] || '') : '',
+            'Collection': isFirst ? (calendarCollectionMap[handle] || resolveCollection(typeMap[handle] || '')) : '',
             'Metafield: custom.original_title [single_line_text_field]': isFirst ? originalTitle : '',
           });
           if (imageUrl) imageCount++;
