@@ -111,6 +111,16 @@
         </div>
         <div id="catStatus"></div>
       </div>
+
+      <div style="margin-top:20px;">
+        <div class="upload-zone" id="regZone">
+          <input type="file" accept=".csv" id="regInput">
+          <div class="upload-icon">🛍️</div>
+          <p>Shopify登録済み商品CSV（任意）をアップロード</p>
+          <small>products_export〜.csv（説明文内リンクの生存判定に使用）</small>
+        </div>
+        <div id="regStatus"></div>
+      </div>
     </div>
   </div>
 
@@ -130,6 +140,10 @@
           <li>ベンダー名は「EL COMMUN online shop」で統一</li>
           <li>カテゴリCSV（dl-item-cat）をアップすると「表示先カテゴリ」の最後の階層を「Type」に自動設定（「メーカー・ブランド」「作家シリーズ」「セール商品」を含むカテゴリは除外し、階層が最も深いものを優先）</li>
         </ul>
+      </div>
+      <div class="option-row">
+        <input type="checkbox" id="linkCleanChk" checked>
+        <label for="linkCleanChk">説明文のリンク切れブロックを削除<span class="opt-sub">（今回のCSV・Shopify登録済み商品に無い商品や楽天専用ページへのリンクを含むブロックを除去）</span></label>
       </div>
       <div class="option-row">
         <input type="checkbox" id="titleSplitChk" checked>
@@ -198,6 +212,49 @@
     catZone.classList.remove('drag');
     handleCatFile(e.dataTransfer.files[0]);
   });
+
+  const regZone   = document.getElementById('regZone');
+  const regInput  = document.getElementById('regInput');
+  const regStatus = document.getElementById('regStatus');
+  let registeredHandles = new Set(); // Shopify登録済み商品のHandle（末尾ハイフン除去済み）
+
+  regInput.addEventListener('change', e => handleRegFile(e.target.files[0]));
+  regZone.addEventListener('dragover', e => { e.preventDefault(); regZone.classList.add('drag'); });
+  regZone.addEventListener('dragleave', () => regZone.classList.remove('drag'));
+  regZone.addEventListener('drop', e => {
+    e.preventDefault();
+    regZone.classList.remove('drag');
+    handleRegFile(e.dataTransfer.files[0]);
+  });
+
+  async function handleRegFile(file) {
+    if (!file) return;
+    if (!file.name.endsWith('.csv')) {
+      regStatus.innerHTML = '<div class="file-status err">❌ CSVファイルを選択してください</div>';
+      return;
+    }
+    try {
+      const buf = await file.arrayBuffer();
+      let text;
+      try { text = new TextDecoder('utf-8', { fatal: true }).decode(buf); }
+      catch { text = new TextDecoder('shift-jis').decode(buf); }
+      const parsed = Papa.parse(text, { header: true, skipEmptyLines: true });
+      if (!parsed.data || parsed.data.length === 0) throw new Error('データが見つかりませんでした');
+      registeredHandles = new Set(
+        parsed.data.map(r => normalizeHandle((r['Handle'] || '').trim())).filter(Boolean)
+      );
+      if (registeredHandles.size === 0) throw new Error('Handle列が見つかりませんでした（Shopifyのproducts_exportファイルか確認してください）');
+      regStatus.innerHTML = `<div class="file-status ok">✅ ${file.name} を読み込み、登録済み ${registeredHandles.size} 商品を判定に使用します</div>`;
+    } catch (err) {
+      registeredHandles = new Set();
+      regStatus.innerHTML = `<div class="file-status err">❌ エラー：${err.message}</div>`;
+    }
+  }
+
+  // Shopifyはハンドル登録時に末尾のハイフンを削除する（楽天「cal-01-」→ Shopify「cal-01」）
+  function normalizeHandle(slug) {
+    return (slug || '').replace(/-+$/, '');
+  }
 
   function handleFile(file) {
     if (!file) return;
@@ -1166,6 +1223,31 @@
       const categoryLinkIssues = []; // 対応表に無い楽天カテゴリリンク
       const collectionMissing = new Set(); // コレクション一覧に無いType（Collection空欄）
       const doTitleSplit = document.getElementById('titleSplitChk').checked;
+      const doLinkClean = document.getElementById('linkCleanChk').checked;
+      let removedBlockCount = 0;
+      let linkCleanedProducts = 0;
+
+      // リンク生存判定用：今回のCSVの商品 ＋ Shopify登録済み商品（どちらも末尾ハイフン除去で比較）
+      const validHandles = new Set(registeredHandles);
+      Object.keys(grouped).forEach(h => { if (h) validHandles.add(normalizeHandle(h.trim())); });
+
+      // 説明文を <font size="4"> 見出し単位のブロックに分割し、
+      // リンク切れ（未登録商品・楽天GOLDページ）を含むブロックを削除する
+      function removeBrokenBlocks(html) {
+        const blocks = html.split(/(?=<font size="4")/);
+        let removed = 0;
+        const kept = blocks.filter(block => {
+          const urls = block.match(/href="(https?:\/\/[^"]+)"/g) || [];
+          for (const raw of urls) {
+            const u = raw.slice(6, -1);
+            if (/rakuten\.ne\.jp\/gold\//.test(u)) { removed++; return false; }
+            const m = u.match(/^https?:\/\/item\.rakuten\.co\.jp\/elcommun\/(?!c\/)([^/?#"]+)/);
+            if (m && !validHandles.has(normalizeHandle(m[1]))) { removed++; return false; }
+          }
+          return true;
+        });
+        return { html: kept.join(''), removed };
+      }
 
       Object.entries(grouped).forEach(([handleKey, items]) => {
         if (!handleKey) { skipCount++; return; }
@@ -1181,8 +1263,18 @@
         if (!productName) { skipCount++; return; }
 
         const handle = handleKey.trim();
-        // ① 楽天カテゴリリンク（/c/）を対応表でShopifyコレクションリンクに変換（商品リンク変換より必ず先に行う）
-        const bodyAfterCategory = (first['スマートフォン用商品説明文'] || '')
+        // ① リンク切れブロック（未登録商品・楽天GOLDページへのリンクを含む）を削除
+        let bodySource = first['スマートフォン用商品説明文'] || '';
+        if (doLinkClean && bodySource) {
+          const cleaned = removeBrokenBlocks(bodySource);
+          if (cleaned.removed > 0) {
+            removedBlockCount += cleaned.removed;
+            linkCleanedProducts++;
+          }
+          bodySource = cleaned.html;
+        }
+        // ② 楽天カテゴリリンク（/c/）を対応表でShopifyコレクションリンクに変換（商品リンク変換より必ず先に行う）
+        const bodyAfterCategory = bodySource
           .replace(CATEGORY_LINK_RE, (url) => {
             // http→https・末尾スラッシュ補完で表記ゆれを吸収してから照合
             const normalized = url.replace(/^http:/, 'https:').replace(/\/?$/, '/');
@@ -1191,9 +1283,11 @@
             categoryLinkIssues.push(`${productName}（${handle}）：対応表に無いカテゴリリンク「${url}」`);
             return url;
           });
-        // ② 楽天商品ページリンクをShopify商品ページリンクに変換（カテゴリリンク/c/は対象外）
+        // ③ 楽天商品ページリンクをShopify商品ページリンクに変換（カテゴリリンク/c/は対象外）
+        //    Shopifyのハンドルは末尾ハイフンが削除されるため、リンク側も揃える（cal-01- → cal-01）
         const bodyHTML = bodyAfterCategory
-          .replace(/https?:\/\/item\.rakuten\.co\.jp\/elcommun\/(?!c\/)/g, 'https://elcommun.com/products/');
+          .replace(/https?:\/\/item\.rakuten\.co\.jp\/elcommun\/(?!c\/)([^/?#"'\s<>]+)/g,
+            (m, slug) => 'https://elcommun.com/products/' + normalizeHandle(slug));
         const option1Name = first['バリエーション項目名定義'] || 'Title';
 
         // ジャンルID「111167」は表示先カテゴリに関わらずType「手帳・ダイアリー」（Product Category: os-3-5-3）に固定
@@ -1298,7 +1392,7 @@
           })();
 
           shopifyData.push({
-            'Handle': handle,
+            'Handle': normalizeHandle(handle), // Shopify登録後のハンドル表記（末尾ハイフン無し）に揃える
             'Title': isFirst ? finalTitle : '',
             'Body (HTML)': isFirst ? bodyHTML : '',
             'Vendor': isFirst ? 'EL COMMUN online shop' : '',
@@ -1362,6 +1456,12 @@
       if (doTitleSplit && titleSplitCount > 0) {
         const avgTags = (titleTagTotal / titleSplitCount).toFixed(1);
         log(`✂️  タイトル分解：${titleSplitCount} 件 / タグ追加：平均 ${avgTags} 個/商品`, 'log-ok');
+      }
+      if (doLinkClean && removedBlockCount > 0) {
+        log(`🧹 リンク切れブロック削除：${removedBlockCount} ブロック（${linkCleanedProducts} 商品）`, 'log-ok');
+        if (registeredHandles.size === 0) {
+          log('　※Shopify登録済み商品CSV未読み込みのため、今回のCSV内の商品のみ有効リンクと判定しています', 'log-warn');
+        }
       }
       log(`📋 出力行数：${shopifyData.length} 行`, 'log-info');
       if (Object.keys(typeMap).length > 0 || Object.keys(tagsMap).length > 0) {
