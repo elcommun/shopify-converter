@@ -1272,20 +1272,49 @@
         Object.keys(grouped).forEach(h => { if (h) validHandles.add(normalizeHandle(h.trim())); });
       }
 
+      // リンク切れ判定：楽天GOLDページ、またはHandle一覧に無い商品へのリンク
+      function isBrokenUrl(u) {
+        if (/rakuten\.ne\.jp\/gold\//.test(u)) return true;
+        const m = u.match(/^https?:\/\/item\.rakuten\.co\.jp\/elcommun\/(?!c\/)([^/?#"]+)/);
+        return !!m && !validHandles.has(normalizeHandle(m[1]));
+      }
+
       // 説明文を <font size="4"> 見出し単位のブロックに分割し、
-      // リンク切れ（未登録商品・楽天GOLDページ）を含むブロックを削除する
+      // Handle一覧に無い商品・楽天GOLDページへのリンクだけを商品単位で削除する。
+      // ブロック内の全リンクが切れている場合のみブロックごと削除。
       function removeBrokenBlocks(html) {
         const blocks = html.split(/(?=<font size="4")/);
         let removed = 0;
-        const kept = blocks.filter(block => {
-          const urls = block.match(/href="(https?:\/\/[^"]+)"/g) || [];
-          for (const raw of urls) {
-            const u = raw.slice(6, -1);
-            if (/rakuten\.ne\.jp\/gold\//.test(u)) { removed++; return false; }
-            const m = u.match(/^https?:\/\/item\.rakuten\.co\.jp\/elcommun\/(?!c\/)([^/?#"]+)/);
-            if (m && !validHandles.has(normalizeHandle(m[1]))) { removed++; return false; }
-          }
-          return true;
+        const kept = blocks.map(block => {
+          const urls = [...block.matchAll(/href="(https?:\/\/[^"]+)"/g)].map(mm => mm[1]);
+          if (urls.length === 0) return block;
+          const brokenCount = urls.filter(isBrokenUrl).length;
+          if (brokenCount === 0) return block;
+          removed += brokenCount;
+          if (brokenCount === urls.length) return ''; // 有効リンクが残らないブロックは丸ごと削除
+          // 混在ブロック：関連商品グリッド（全セルがバナーリンク<a><img>のtable）は
+          // 壊れたセルだけ除去して3列で組み直す
+          let out = block.replace(/<table([^>]*)>([\s\S]*?)<\/table>/g, (tableMatch, attrs, inner) => {
+            const cells = inner.match(/<td[^>]*>[\s\S]*?<\/td>/g) || [];
+            const isGrid = cells.length >= 2 && cells.every(c => /<a href="https?:\/\/[^"]+"[^>]*>\s*<img/.test(c));
+            if (!isGrid) return tableMatch;
+            const keptCells = cells.filter(c => {
+              const cu = [...c.matchAll(/href="(https?:\/\/[^"]+)"/g)].map(mm => mm[1]);
+              return !cu.some(isBrokenUrl);
+            });
+            if (keptCells.length === 0) return '';
+            const rows = [];
+            for (let i = 0; i < keptCells.length; i += 3) {
+              const row = keptCells.slice(i, i + 3);
+              while (row.length < 3) row.push('<td width="33%"></td>');
+              rows.push('<tr>' + row.join('') + '</tr>');
+            }
+            return '<table' + attrs + '>' + rows.join('') + '</table>';
+          });
+          // グリッド外の壊れたアンカー（単独バナー・テキストリンク等）を個別に除去
+          out = out.replace(/<a href="(https?:\/\/[^"]+)"[^>]*>[\s\S]*?<\/a>/g, (mm, u) =>
+            isBrokenUrl(u) ? '' : mm);
+          return out;
         });
         return { html: kept.join(''), removed };
       }
