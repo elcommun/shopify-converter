@@ -1265,6 +1265,7 @@
       let removedBlockCount = 0;
       let linkCleanedProducts = 0;
       const removedLinkTargets = new Set(); // 削除したリンク先（確認用）
+      const gramsIssues = []; // 配送区分が不明でVariant Gramsを設定できない商品
 
       // リンク生存判定用（末尾ハイフン除去で比較）：
       // Shopify登録済み商品CSVがあればそのHandle列のみを正とする。無ければ今回のCSV内の商品で判定。
@@ -1394,6 +1395,13 @@
         // 配送方法セット管理番号＋送料区分1 から配送タグを判定し、Tagsの末尾に追加
         const shippingSource = validVariants[0] || first;
         const shippingTag = resolveShippingTag(shippingSource['配送方法セット管理番号'], shippingSource['送料区分1']);
+        // 配送区分に応じてVariant Gramsを設定（ゆうメール:30 / ゆうパケ:300 / 宅配便:3000）
+        const shippingGrams = shippingTag.startsWith('ゆうメール') ? '30'
+          : shippingTag.startsWith('ゆうパケ') ? '300'
+          : shippingTag.startsWith('宅配便') ? '3000' : '';
+        if (!shippingGrams) {
+          gramsIssues.push(`${productName}（${handle}）：配送区分が不明のためVariant Gramsを設定できません（配送方法セット管理番号「${(shippingSource['配送方法セット管理番号'] || '').trim()}」・送料区分1「${(shippingSource['送料区分1'] || '').trim()}」）`);
+        }
         const baseTagsStr = (() => {
           const base = tagsMap[handle] || '';
           return base ? `${base}, ${shippingTag}` : shippingTag;
@@ -1485,7 +1493,7 @@
             'Option2 Name': '', 'Option2 Value': '', 'Option2 Linked To': '',
             'Option3 Name': '', 'Option3 Value': '', 'Option3 Linked To': '',
             'Variant SKU': sku,
-            'Variant Grams': sku ? '1000.0' : '',
+            'Variant Grams': sku ? shippingGrams : '',
             'Variant Inventory Tracker': sku ? 'shopify' : '',
             'Variant Inventory Qty': sku ? '0' : '',
             'Variant Inventory Policy': sku ? 'deny' : '',
@@ -1583,6 +1591,12 @@
         log('──────────────────────────────────', 'log-sep');
         log(`⚠️ コレクション一覧に無いType：${collectionMissing.size} 種（Collection列は空欄になります）`, 'log-warn');
         collectionMissing.forEach(t => log(`　・${t}`, 'log-warn'));
+      }
+
+      if (gramsIssues.length > 0) {
+        log('──────────────────────────────────', 'log-sep');
+        log(`❌ Variant Grams未設定：${gramsIssues.length} 件（配送区分が判定できません）`, 'log-err');
+        gramsIssues.forEach(msg => log(`　・${msg}`, 'log-err'));
       }
 
       document.getElementById('statsGrid').innerHTML = `
