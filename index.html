@@ -1055,6 +1055,13 @@
   };
   const CATEGORY_LINK_RE = /https?:\/\/item\.rakuten\.co\.jp\/elcommun\/c\/[0-9]+\/?/g;
 
+  // ===== 楽天GOLDページ → Shopifyリンク 対応表 =====
+  // ここに登録されたGOLDページはリンク切れ扱いせず変換して残す（未登録のGOLDページは従来通り削除）
+  const GOLD_LINK_MAP = {
+    "https://www.rakuten.ne.jp/gold/elcommun/event/decoration_item/": "https://elcommun.com/collections/デコレーション用品",
+  };
+  const GOLD_LINK_RE = /https?:\/\/www\.rakuten\.ne\.jp\/gold\/elcommun\/[^"'\s<>]*/g;
+
   // ===== Excel通貨誤変換の検出・復元 =====
   // 例：型番「BND-001」がExcel/Numbersで開かれると通貨コード（ブルネイドル）と誤認識され
   //     「-BND 1.00」「-BND?1.00」のような形に化けてしまう。楽天CSVがExcel等で
@@ -1343,8 +1350,13 @@
         if (!productName) { skipCount++; return; }
 
         const handle = handleKey.trim();
-        // ① リンク切れブロック（未登録商品・楽天GOLDページへのリンクを含む）を削除
-        let bodySource = first['スマートフォン用商品説明文'] || '';
+        // ⓪ 対応表にある楽天GOLDページをShopifyリンクに変換（リンク切れ削除より必ず先に行う）
+        let bodySource = (first['スマートフォン用商品説明文'] || '')
+          .replace(GOLD_LINK_RE, (url) => {
+            const normalized = url.replace(/^http:/, 'https:').replace(/\/?$/, '/');
+            return GOLD_LINK_MAP[normalized] || url;
+          });
+        // ① リンク切れブロック（未登録商品・対応表に無い楽天GOLDページへのリンクを含む）を削除
         if (doLinkClean && bodySource) {
           const cleaned = removeBrokenBlocks(bodySource);
           if (cleaned.removed > 0) {
