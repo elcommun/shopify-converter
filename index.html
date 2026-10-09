@@ -1072,6 +1072,31 @@
     return null;
   }
 
+  // ===== 商品説明文の書式統一 =====
+  // 商品ページのフォーマットがバラつかないよう、見出しと余白を統一する。
+  // ・見出しは太字20px固定（<font size="4">でもテーマやShopifyエディタ由来の<span>でも同じ見た目に）
+  // ・見出し直後の<br>と、テーマの<hr>上下マージンによる空きすぎを抑える
+  // ・セクション間の<br>3連続以上は2つに詰める
+  const HEADING_STYLE = 'font-size:20px;font-weight:bold;color:#2F2724;';
+  const HR_STYLE = 'margin:10px 0 16px;';
+  function normalizeBodyFormat(html) {
+    return html
+      // <font size="4">見出し</font><br><hr> → 統一スタイルの見出し＋hr（brは除去）
+      .replace(/<font size="4"[^>]*>([\s\S]*?)<\/font>\s*(?:<br\s*\/?>)?\s*<hr\s*\/?>/gi,
+        `<span style="${HEADING_STYLE}">$1</span><hr style="${HR_STYLE}">`)
+      // hrを伴わない<font size="4">見出し → スタイルだけ統一
+      .replace(/<font size="4"[^>]*>([\s\S]*?)<\/font>/gi,
+        `<span style="${HEADING_STYLE}">$1</span>`)
+      // Shopifyエディタ等で書き換えられた小さい見出し（span font-size:large）も統一
+      .replace(/<span style="[^"]*font-size:\s*large;?[^"]*">([\s\S]*?)<\/span>/gi,
+        `<span style="${HEADING_STYLE}">$1</span>`)
+      // 画像下キャプション（グレー背景テーブル）の文字を16pxに（テーマ標準13pxでは小さいため）
+      .replace(/<table width="100%" bgcolor="#F7F7F7" cellspacing="10"><tr><td>/gi,
+        '<table width="100%" bgcolor="#F7F7F7" cellspacing="10"><tr><td style="font-size:16px;">')
+      // <br>3連続以上（空白・改行を挟む場合も含む）→ 2つに
+      .replace(/(?:<br\s*\/?>\s*){3,}/gi, '<br><br>');
+  }
+
   // ===== Excel通貨誤変換の検出・復元 =====
   // 例：型番「BND-001」がExcel/Numbersで開かれると通貨コード（ブルネイドル）と誤認識され
   //     「-BND 1.00」「-BND?1.00」のような形に化けてしまう。楽天CSVがExcel等で
@@ -1309,7 +1334,8 @@
       // Handle一覧に無い商品・楽天GOLDページへのリンクだけを商品単位で削除する。
       // ブロック内の全リンクが切れている場合のみブロックごと削除。
       function removeBrokenBlocks(html) {
-        const blocks = html.split(/(?=<font size="4")/);
+        // 見出し（書式統一後のspan、未統一のfontどちらも）を区切りにブロック分割
+        const blocks = html.split(/(?=<span style="font-size:20px;font-weight:bold)|(?=<font size="4")/);
         let removed = 0;
         const kept = blocks.map(block => {
           const urls = [...block.matchAll(/href="(https?:\/\/[^"]+)"/g)].map(mm => mm[1]);
@@ -1360,8 +1386,8 @@
         if (!productName) { skipCount++; return; }
 
         const handle = handleKey.trim();
-        // ⓪ 対応表にある楽天GOLDページをShopifyリンクに変換（リンク切れ削除より必ず先に行う）
-        let bodySource = (first['スマートフォン用商品説明文'] || '')
+        // ⓪ 書式統一（見出し太字20px・キャプション16px・余白の詰め）→ GOLDページ変換（リンク切れ削除より必ず先に行う）
+        let bodySource = normalizeBodyFormat(first['スマートフォン用商品説明文'] || '')
           .replace(GOLD_LINK_RE, (url) => resolveGoldLink(url) || url);
         // ① リンク切れブロック（未登録商品・対応表に無い楽天GOLDページへのリンクを含む）を削除
         if (doLinkClean && bodySource) {
