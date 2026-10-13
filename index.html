@@ -1513,7 +1513,14 @@
             }
             return raw;
           })();
-          const price = item ? (item['通常購入販売価格'] || '') : '';
+          // 価格は税込に変換（楽天の「消費税」が0=税別の場合のみ「消費税率」を掛ける。1=税込ならそのまま）
+          const price = (() => {
+            const raw = item ? (item['通常購入販売価格'] || '').trim() : '';
+            if (raw === '' || isNaN(Number(raw))) return raw;
+            if ((first['消費税'] || '').trim() === '1') return raw; // 既に税込
+            const taxRate = parseFloat((first['消費税率'] || '').trim()) || 0.1;
+            return String(Math.round(Number(raw) * (1 + taxRate)));
+          })();
           const barcode = item ? (item['カタログID'] || '') : '';
           // Variant Image：SKU画像パスに画像ベースURLを付与
           const variantImage = (() => {
